@@ -45,6 +45,10 @@ void skiplist::insert(uint64_t key, const std::string &val) {
         newNode->nxt[i]   = update[i]->nxt[i];
         update[i]->nxt[i] = newNode;
     }
+
+    // 更新字节数
+    bytes += sizeof(key) + val.size();
+    s++;
 }
 
 std::string skiplist::search(uint64_t key) {
@@ -65,7 +69,7 @@ bool skiplist::del(uint64_t key, uint32_t len) {
     std::vector<slnode *> update(MAX_LEVEL, nullptr);
     slnode *current = head;
 
-    // 查找目标节点
+    // 查找删除位置
     for (int i = curMaxL - 1; i >= 0; i--) {
         while (current->nxt[i] != tail && current->nxt[i]->key < key) {
             current = current->nxt[i];
@@ -74,25 +78,35 @@ bool skiplist::del(uint64_t key, uint32_t len) {
     }
     current = current->nxt[0];
 
-    // 如果不存在
-    if (current->type == TAIL || current->key != key) {
+    // 不存在该节点
+    if (current == tail || current->key != key) {
         return false;
     }
 
-    // 更新前驱指针
-    for (int i = 0; i < curMaxL; i++) {
-        if (update[i]->nxt[i] != current) {
-            break;
+    // 删除 len 个节点
+    int count = 0;
+    while (current != tail && count < len) {
+        slnode *tmp = current;
+        // 更新前驱指针
+        for (int i = 0; i < curMaxL; i++) {
+            if (update[i]->nxt[i] == current) {
+                update[i]->nxt[i] = current->nxt[i];
+            }
         }
-        update[i]->nxt[i] = current->nxt[i];
+        current = current->nxt[0];
+        // 更新字节数
+        bytes -= sizeof(tmp->key) + tmp->val.size();
+        s--;
+
+        delete tmp;
+        count++;
     }
 
-    // 更新当前层数
-    while (curMaxL > 1 && !head->nxt[curMaxL - 1]) {
+    // 更新 curMaxL
+    while (curMaxL > 1 && head->nxt[curMaxL - 1] == tail) {
         curMaxL--;
     }
 
-    delete current;
     return true;
 }
 
