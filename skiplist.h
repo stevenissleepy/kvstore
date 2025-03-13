@@ -2,6 +2,7 @@
 #define LSM_KV_SKIPLIST_H
 
 #include <cstdint>
+#include <ctime>
 #include <limits>
 #include <list>
 #include <string>
@@ -49,6 +50,9 @@ public:
         this->p = p;
         for (int i = 0; i < MAX_LEVEL; ++i)
             head->nxt[i] = tail;
+
+        // set random seed
+        srand(time(nullptr));
     }
 
     slnode *getFirst() {
@@ -60,7 +64,11 @@ public:
     void insert(uint64_t key, const std::string &str);
     std::string search(uint64_t key);
     bool del(uint64_t key, uint32_t len);
-    void scan(uint64_t key1, uint64_t key2, std::vector<std::pair<uint64_t, std::string>> &list);
+    void scan(
+        uint64_t key1,
+        uint64_t key2,
+        std::vector<std::pair<uint64_t, std::string>> &list
+    );
     slnode *lowerBound(uint64_t key);
     void reset();
     uint32_t getBytes();

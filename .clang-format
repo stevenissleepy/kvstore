@@ -16,7 +16,7 @@ BinPackParameters: false
 BreakAfterAttributes: Always
 BreakBeforeBraces: Attach
 BreakConstructorInitializers: AfterColon
-ColumnLimit: 120
+ColumnLimit: 80
 ContinuationIndentWidth: 4
 IncludeBlocks: Regroup
 IndentWidth: 4
