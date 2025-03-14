@@ -27,6 +27,7 @@ void skiplist::insert(uint64_t key, const std::string &val) {
 
     // 检查是否已存在
     if (current->nxt[0] != tail && current->nxt[0]->key == key) {
+        current->nxt[0]->val = val;
         return;
     }
 
