@@ -9,7 +9,10 @@
 #include <set>
 
 class KVStore : public KVStoreAPI {
+private:
     // You can add your implementation here
+    bool sstable_num_out_of_limit(int level);
+
 private:
     skiplist *s = new skiplist(0.5); // memtable
     // std::vector<sstablehead> sstableIndex;  // sstable的表头缓存

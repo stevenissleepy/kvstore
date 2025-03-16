@@ -30,6 +30,11 @@ struct cmpPoi {
     }
 };
 
+bool KVStore::sstable_num_out_of_limit(int level) {
+    int limit = 1 << (level + 1); // 2^(k+1)
+    return sstableIndex[level].size() > limit;
+}
+
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
 {
@@ -272,6 +277,70 @@ void KVStore::scan(uint64_t key1, uint64_t key2, std::list<std::pair<uint64_t, s
 void KVStore::compaction() {
     int curLevel = 0;
     // TODO here
+
+    while(sstable_num_out_of_limit(curLevel)) {
+        // 将 level-n 中时间戳最大的三个 sstable 加入 ssts
+        std::vector<sstablehead&> ssts;
+        for(auto it : sstableIndex[curLevel]) {
+            ssts.push_back(it);
+        }
+        std::sort(ssts.begin(), ssts.end(), [](sstablehead& a, sstablehead& b) {
+            return a.getTime() > b.getTime();
+        });
+        while(ssts.size() > 3)
+            ssts.pop_back();
+
+        // 取 ssts 中的 key 区间
+        uint64_t minKey = INF, maxKey = 0;
+        for (sstablehead& it : ssts) {
+            minKey = std::min(minKey, it.getMinV());
+            maxKey = std::max(maxKey, it.getMaxV());
+        }
+
+        // 找出 level-(n+1) 中 key 值在区间内的 sstable
+        for (sstablehead& it : sstableIndex[curLevel+1]) {
+            if (it.getMinV() <= maxKey && it.getMaxV() >= minKey)
+                ssts.push_back(it);
+        }
+
+        // 将 ssts 中的 sstable 按时间戳排序
+        // 保证下一步中时间戳较大的 key 会覆盖时间戳较小的 key
+        std::sort(ssts.begin(), ssts.end(), [](sstablehead& a, sstablehead& b) {
+            return a.getTime() > b.getTime();
+        });
+
+        // 合并 ssts 中的 sstable
+        std::map<uint64_t, std::string> pairs;
+        for(sstablehead& it : ssts) {
+            sstable ss;
+            ss.loadFile(it.getFilename().data());
+            int cnt = ss.getCnt();
+            for(int i=0; i< cnt; ++i) {
+                uint64_t key = ss.getKey(i);
+                std::string val = ss.getData(i);
+                pairs[key] = val;
+
+                // 如果是最后一层，且 key 为删除标记，则删除
+                if(curLevel == totalLevel && val == DEL)
+                    pairs.erase(key);
+            }
+        }
+
+        // 生成新的 sstable
+        sstable newSs;
+        for(auto& it : pairs){
+            if(newSs.checkSize(it.second, curLevel+1, 0)){
+                newSs.reset();
+            }
+            newSs.insert(it.first, it.second);
+        }
+        newSs.checkSize("", curLevel+1, 1);
+        
+        curLevel++;
+    }
+
+    // 更新 totalLevel
+    totalLevel = std::max(totalLevel, curLevel);
 }
 
 void KVStore::delsstable(std::string filename) {
