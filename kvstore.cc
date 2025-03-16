@@ -302,19 +302,16 @@ void KVStore::compaction() {
         }
 
         // 找出 level-(n+1) 中 key 值在区间内的 sstable
-        for(auto it = sstableIndex[curLevel+1].begin(); it != sstableIndex[curLevel+1].end(); ++it) {
-            if(it->getMaxV() < minKey || it->getMinV() > maxKey) {
-                continue;
+        for (sstablehead& it : sstableIndex[curLevel+1]) {
+            if(it.getMinV() <= maxKey && it.getMaxV() >= minKey) {
+                ssts.push_back(it);
             }
-            ssts.push_back(*it);
         }
 
-        // 将 ssts 中的 sstable 按时间戳排序
+        // 将 ssts 中的 sstable 按时间戳排序，时间戳小的在前
         // 保证下一步中时间戳较大的 key 会覆盖时间戳较小的 key
-        std::sort(ssts.begin(), ssts.end(), [](sstablehead& a, sstablehead& b) {
-            return !(a<b);
-        });
-        uint64_t maxTime = ssts[0].getTime();
+        std::sort(ssts.begin(), ssts.end());
+        uint64_t maxTime = ssts.back().getTime();
 
         // 合并 ssts 中的 sstable
         std::map<uint64_t, std::string> pairs;
@@ -328,7 +325,7 @@ void KVStore::compaction() {
                 pairs[key] = val;
 
                 // 如果是最后一层，且 key 为删除标记，则删除
-                if(curLevel == totalLevel && val == DEL)
+                if(curLevel+1 == totalLevel && val == DEL)
                     pairs.erase(key);
             }
             delsstable(it.getFilename());
