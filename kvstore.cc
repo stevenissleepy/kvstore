@@ -285,12 +285,9 @@ void KVStore::compaction() {
             utils::mkdir(path.data());
         }
 
-        // 将 level-n 后三个 sstable 取出
+        // 将 level-n 后三个 sstable 取出, 删除文件
         std::vector<sstablehead> ssts;
-        for (int i = 0; i < 3; ++i) {
-            ssts.push_back(sstableIndex[curLevel].back());
-            sstableIndex[curLevel].pop_back();
-        }
+        ssts.insert(ssts.begin(), sstableIndex[curLevel].end()-3, sstableIndex[curLevel].end());
 
         // 取 ssts 中的 key 区间
         uint64_t minKey = INF, maxKey = 0;
@@ -300,13 +297,11 @@ void KVStore::compaction() {
         }
 
         // 找出 level-(n+1) 中 key 值在区间内的 sstable
-        for(auto it = sstableIndex[curLevel+1].begin(); it != sstableIndex[curLevel+1].end(); ) {
+        for(auto it = sstableIndex[curLevel+1].begin(); it != sstableIndex[curLevel+1].end(); ++it) {
             if(it->getMaxV() < minKey || it->getMinV() > maxKey) {
-                it++;
-            } else {
-                ssts.push_back(*it);
-                it = sstableIndex[curLevel+1].erase(it);
+                continue;
             }
+            ssts.push_back(*it);
         }
 
         // 将 ssts 中的 sstable 按时间戳排序
@@ -330,20 +325,25 @@ void KVStore::compaction() {
                 if(curLevel == totalLevel && val == DEL)
                     pairs.erase(key);
             }
+            delsstable(it.getFilename());
         }
 
         // 生成新的 sstable
         sstable newSs;
-        for(auto it = pairs.rbegin(); it != pairs.rend(); ++it){
-            if(newSs.checkSize(it->second, curLevel+1, 0)){
-                sstableIndex[curLevel+1].insert(sstableIndex[curLevel+1].begin(), newSs.getHead());
+        newSs.setTime(++TIME);
+        for(auto it: pairs) {
+            if(newSs.checkSize(it.second, curLevel+1, 0)){
+                sstableIndex[curLevel+1].push_back(newSs.getHead());
                 newSs.reset();
             }
-            newSs.insert(it->first, it->second);
+            newSs.insert(it.first, it.second);
         }
-        sstableIndex[curLevel+1].insert(sstableIndex[curLevel+1].begin(), newSs.getHead());
+        sstableIndex[curLevel+1].push_back(newSs.getHead());
         newSs.checkSize("", curLevel+1, 1);
         
+        // 将 sstableIndex[curLevel+1] 排序
+        std::sort(sstableIndex[curLevel+1].begin(), sstableIndex[curLevel+1].end());
+
         curLevel++;
     }
 
