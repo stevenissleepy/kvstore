@@ -1,4 +1,4 @@
-set(CMAKE_CXX_FLAGS "-std=c++17 -g")
+set(CMAKE_CXX_FLAGS "-std=c++17")
 
 add_executable(correctness correctness.cc kvstore_api.h kvstore.h
         kvstore.cc skiplist.cpp skiplist.h sstable.cpp sstable.h

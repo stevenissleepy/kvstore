@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include <chrono>
+
 class CorrectnessTest : public Test {
 private:
     const uint64_t SIMPLE_TEST_MAX = 512;
@@ -141,6 +143,9 @@ public:
     void start_test(void *args = NULL) override {
         std::cout << "KVStore Correctness Test" << std::endl;
 
+        // 开始计时
+        auto start_time = std::chrono::high_resolution_clock::now();
+
         store.reset();
 
         std::cout << "[Simple Test]" << std::endl;
@@ -158,6 +163,13 @@ public:
         //        store.reset();
         //        std::cout << "[delete test]" << std::endl;
         //        delete_test(1024 * 64);
+        
+        // 结束计时
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
+
+        // 输出测试总耗时
+        std::cout << "Total test time: " << duration.count() << " s" << std::endl;
     }
 };
 
