@@ -317,12 +317,16 @@ void KVStore::compaction() {
         // 合并 ssts 中的 sstable
         std::map<uint64_t, std::string> pairs;
         for(sstablehead& it : ssts) {
-            sstable ss;
-            ss.loadFile(it.getFilename().data());
-            int cnt = ss.getCnt();
+            int cnt = it.getCnt();
             for(int i=0; i< cnt; ++i) {
-                uint64_t key = ss.getKey(i);
-                std::string val = ss.getData(i);
+                // get key
+                uint64_t key = it.getKey(i);
+                // get value
+                uint32_t startOffset = 10240 + 32 + cnt * 12;
+                startOffset += (i == 0) ? 0 : it.getOffset(i-1);
+                uint32_t len = (i == 0) ? it.getOffset(0) : it.getOffset(i) - it.getOffset(i-1);
+                std::string val = fetchString(it.getFilename(), startOffset, len);
+                // store in pairs
                 pairs[key] = val;
             }
             delsstable(it.getFilename());
