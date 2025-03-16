@@ -323,21 +323,27 @@ void KVStore::compaction() {
                 uint64_t key = ss.getKey(i);
                 std::string val = ss.getData(i);
                 pairs[key] = val;
-
-                // 如果是最后一层，且 key 为删除标记，则删除
-                if(curLevel+1 == totalLevel && val == DEL)
-                    pairs.erase(key);
             }
             delsstable(it.getFilename());
         }
 
         // 生成新的 sstable
         sstable newSs;
-        newSs.setTime(maxTime);
+        uint32_t maxNameSuffix = 0;
+        for(sstablehead& it: sstableIndex[curLevel+1]) {
+            maxNameSuffix = std::max(maxNameSuffix, it.getNameSuf());
+        }
+        newSs.setTime(maxTime);             // 时间戳为 ssts 中最大的时间戳
+        newSs.setNamesuffix(maxNameSuffix); // 文件名不会重复
+
         for(auto it: pairs) {
             if(newSs.checkSize(it.second, curLevel+1, 0)){
                 addsstable(newSs, curLevel+1);
                 newSs.reset();
+            }
+            // 如果是最后一层，且 key 对应的 value 为 DEL，则不插入
+            if(curLevel+1 == totalLevel && it.second == DEL) {
+                continue;
             }
             newSs.insert(it.first, it.second);
         }
