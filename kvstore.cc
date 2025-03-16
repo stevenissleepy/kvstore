@@ -285,18 +285,13 @@ void KVStore::compaction() {
             utils::mkdir(path.data());
         }
 
-        // 将 level-n 后四个 sstable 取出
+        // 将 level-n 前四个 sstable 取出
         // level-0 不足四个，全部取出
         std::vector<sstablehead> ssts;
         int size = sstableIndex[curLevel].size();
-        if(size <= 4) {
-            for(int i=0; i<size; ++i) {
-                ssts.push_back(sstableIndex[curLevel][i]);
-            }
-        } else {
-            for(int i=size-4; i<size; ++i) {
-                ssts.push_back(sstableIndex[curLevel][i]);
-            }
+        size = std::min(size, 4);
+        for(int i=0; i<size; ++i) {
+            ssts.push_back(sstableIndex[curLevel][i]);
         }
 
         // 取 ssts 中的 key 区间
@@ -316,7 +311,10 @@ void KVStore::compaction() {
 
         // 将 ssts 中的 sstable 按时间戳排序
         // 保证下一步中时间戳较大的 key 会覆盖时间戳较小的 key
-        std::sort(ssts.begin(), ssts.end());
+        std::sort(ssts.begin(), ssts.end(), [](sstablehead& a, sstablehead& b) {
+            return !(a<b);
+        });
+        uint64_t maxTime = ssts[0].getTime();
 
         // 合并 ssts 中的 sstable
         std::map<uint64_t, std::string> pairs;
@@ -338,16 +336,16 @@ void KVStore::compaction() {
 
         // 生成新的 sstable
         sstable newSs;
-        newSs.setTime(++TIME);
+        newSs.setTime(maxTime);
         for(auto it: pairs) {
             if(newSs.checkSize(it.second, curLevel+1, 0)){
-                sstableIndex[curLevel+1].push_back(newSs.getHead());
+                addsstable(newSs, curLevel+1);
                 newSs.reset();
             }
             newSs.insert(it.first, it.second);
         }
         newSs.checkSize("", curLevel+1, 1);
-        sstableIndex[curLevel+1].push_back(newSs.getHead());
+        addsstable(newSs, curLevel+1);
         
         // 将 sstableIndex[curLevel+1] 排序
         std::sort(sstableIndex[curLevel+1].begin(), sstableIndex[curLevel+1].end());
