@@ -279,6 +279,12 @@ void KVStore::compaction() {
     // TODO here
 
     while(sstable_num_out_of_limit(curLevel)) {
+        // 如果下一层的文件夹不存在，则创建
+        std::string path = std::string("./data/level-") + std::to_string(curLevel+1);
+        if(!utils::dirExists(path)) {
+            utils::mkdir(path.data());
+        }
+
         // 将 level-n 后三个 sstable 取出
         std::vector<sstablehead> ssts;
         for (int i = 0; i < 3; ++i) {
