@@ -382,4 +382,12 @@ char strBuf[2097152];
  */
 std::string KVStore::fetchString(std::string file, int startOffset, uint32_t len) {
     // TODO here
+    FILE* fp = fopen(file.data(), "rb");
+    if(fp == nullptr) {
+        throw std::runtime_error("open file failed");
+    }
+    fseek(fp, startOffset, SEEK_SET);
+    fread(strBuf, 1, len, fp);
+    fclose(fp);
+    return std::string(strBuf, len);
 }
