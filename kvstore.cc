@@ -285,11 +285,12 @@ void KVStore::compaction() {
             utils::mkdir(path.data());
         }
 
-        // 将 level-n 前四个 sstable 取出
-        // level-0 不足四个，全部取出
+        // level-0 取3个 sstable
+        // level-n 取超出限制的 sstable
         std::vector<sstablehead> ssts;
         int size = sstableIndex[curLevel].size();
-        size = std::min(size, 4);
+        size -= (1<<(curLevel+1));          // 多出来的 sstable 个数
+        size = (curLevel == 0) ? 3 : size;  // level-0 取3个 sstable
         for(int i=0; i<size; ++i) {
             ssts.push_back(sstableIndex[curLevel][i]);
         }
@@ -331,10 +332,10 @@ void KVStore::compaction() {
         sstable newSs;
         uint32_t maxNameSuffix = 0;
         for(sstablehead& it: sstableIndex[curLevel+1]) {
-            maxNameSuffix = std::max(maxNameSuffix, it.getNameSuf());
+            maxNameSuffix = it.getTime()==maxTime ? std::max(maxNameSuffix, it.getNameSuf()) : maxNameSuffix;
         }
         newSs.setTime(maxTime);             // 时间戳为 ssts 中最大的时间戳
-        newSs.setNamesuffix(maxNameSuffix); // 文件名不会重复
+        newSs.setNamesuffix(maxNameSuffix); // 保证文件名不会重复
 
         for(auto it: pairs) {
             if(newSs.checkSize(it.second, curLevel+1, 0)){
