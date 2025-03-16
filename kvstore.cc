@@ -279,16 +279,12 @@ void KVStore::compaction() {
     // TODO here
 
     while(sstable_num_out_of_limit(curLevel)) {
-        // 将 level-n 中时间戳最大的三个 sstable 加入 ssts
-        std::vector<sstablehead&> ssts;
-        for(auto it : sstableIndex[curLevel]) {
-            ssts.push_back(it);
+        // 将 level-n 后三个 sstable 取出
+        std::vector<sstablehead> ssts;
+        for (int i = 0; i < 3; ++i) {
+            ssts.push_back(sstableIndex[curLevel].back());
+            sstableIndex[curLevel].pop_back();
         }
-        std::sort(ssts.begin(), ssts.end(), [](sstablehead& a, sstablehead& b) {
-            return a.getTime() > b.getTime();
-        });
-        while(ssts.size() > 3)
-            ssts.pop_back();
 
         // 取 ssts 中的 key 区间
         uint64_t minKey = INF, maxKey = 0;
@@ -298,9 +294,13 @@ void KVStore::compaction() {
         }
 
         // 找出 level-(n+1) 中 key 值在区间内的 sstable
-        for (sstablehead& it : sstableIndex[curLevel+1]) {
-            if (it.getMinV() <= maxKey && it.getMaxV() >= minKey)
-                ssts.push_back(it);
+        for(auto it = sstableIndex[curLevel+1].begin(); it != sstableIndex[curLevel+1].end(); ) {
+            if(it->getMaxV() < minKey || it->getMinV() > maxKey) {
+                it++;
+            } else {
+                ssts.push_back(*it);
+                it = sstableIndex[curLevel+1].erase(it);
+            }
         }
 
         // 将 ssts 中的 sstable 按时间戳排序
@@ -328,12 +328,14 @@ void KVStore::compaction() {
 
         // 生成新的 sstable
         sstable newSs;
-        for(auto& it : pairs){
-            if(newSs.checkSize(it.second, curLevel+1, 0)){
+        for(auto it = pairs.rbegin(); it != pairs.rend(); ++it){
+            if(newSs.checkSize(it->second, curLevel+1, 0)){
+                sstableIndex[curLevel+1].insert(sstableIndex[curLevel+1].begin(), newSs.getHead());
                 newSs.reset();
             }
-            newSs.insert(it.first, it.second);
+            newSs.insert(it->first, it->second);
         }
+        sstableIndex[curLevel+1].insert(sstableIndex[curLevel+1].begin(), newSs.getHead());
         newSs.checkSize("", curLevel+1, 1);
         
         curLevel++;
