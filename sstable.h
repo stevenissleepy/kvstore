@@ -62,6 +62,8 @@ public:
         }
     }
 
+    sstable(const sstablehead& s);
+
     bool checkSize(std::string val, int curLevel,
                    int flag);        // 检查大小，如果不够加val, 创新sstable
     void putFile(const char *path);  //  将sstable输出到路径

@@ -317,8 +317,7 @@ void KVStore::compaction() {
         // 合并 ssts 中的 sstable
         std::map<uint64_t, std::string> pairs;
         for(sstablehead& it : ssts) {
-            sstable ss;
-            ss.loadFile(it.getFilename().data());
+            sstable ss(it);
             int cnt = ss.getCnt();
             for(int i=0; i< cnt; ++i) {
                 uint64_t key = ss.getKey(i);

@@ -133,6 +133,28 @@ void sstable::insert(uint64_t key, const std::string &val) {
     data.push_back(val);
 }
 
+sstable::sstable(const sstablehead &s):
+    sstablehead(s)
+{
+    FILE *file = fopen(filename.data(), "rb+");
+    uint32_t startOffset = 10240 + 32 + 12 * cnt;
+    fseek(file, startOffset, SEEK_SET);
+
+    // 读第一个
+    fread(buf, 1, index[0].offset, file);
+    buf[index[0].offset] = '\0';
+    data.push_back(std::string(buf));
+    // 读后面所有
+    for (int i = 1; i < cnt; ++i) {
+        fread(buf, 1, index[i].offset - index[i - 1].offset, file);
+        buf[index[i].offset - index[i - 1].offset] = '\0';
+        data.push_back(std::string(buf));
+    }
+    // 刷新缓冲区
+    fflush(file);
+    fclose(file);
+}
+
 bool sstable::checkSize(std::string val, int curLevel, int flag) {
     uint32_t nxtBytes = bytes + 12 + val.length();
     if (flag || nxtBytes > MAXSIZE) {
