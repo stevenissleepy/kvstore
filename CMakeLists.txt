@@ -9,3 +9,8 @@ add_executable(persistence persistence.cc kvstore_api.h kvstore.h kvstore.cc
         skiplist.cpp skiplist.h sstable.cpp sstable.h
         bloom.cpp bloom.h MurmurHash3.h utils.h test.h
         sstablehead.cpp sstablehead.h)
+
+add_executable(performance performance.cc kvstore_api.h kvstore.h kvstore.cc
+        skiplist.cpp skiplist.h sstable.cpp sstable.h
+        bloom.cpp bloom.h MurmurHash3.h utils.h test.h
+        sstablehead.cpp sstablehead.h)
