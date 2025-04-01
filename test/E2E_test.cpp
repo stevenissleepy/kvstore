@@ -1,4 +1,4 @@
-#include "test.h"
+#include "../test.h"
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -86,6 +86,8 @@ private:
             for(auto j : res) {
                 EXPECT(ans[idx], j.second);
                 EXPECT(store.get(j.first), j.second);
+
+                bool stop = !(ans[idx] == j.second && store.get(j.first) == j.second);
                 idx++;
             }
         }
