@@ -424,25 +424,25 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
     std::vector<float> vec = str2vec(query);
     size_t n_embd = vec.size();
 
-    std::priority_queue<std::pair<float, uint64_t>> pq; // max-heap to store top-k results
-
-    // 找到最接近的 key
-    for (const auto &it : kvecTable) {
-        float similarity = common_embd_similarity_cos(vec.data(), it.second.data(), n_embd);
-        pq.emplace(similarity, it.first);
-        if (pq.size() > k) {
-            pq.pop(); // Keep only the top-k elements
-        }
+    // 获取每个 kv 与目标的余弦相似度
+    std::vector<std::pair<uint64_t, float>> ksimTable;
+    for(auto it: kvecTable){
+        uint64_t key = it.first;
+        std::vector<float> vec2 = it.second;
+        float sim = common_embd_similarity_cos(vec.data(), vec2.data(), n_embd);
+        ksimTable.push_back(std::make_pair(key, sim));
     }
 
-    // 找到 key-value
-    while (!pq.empty())
+    // 根据余弦相似度排序
+    std::partial_sort(ksimTable.begin(), ksimTable.begin() + k, ksimTable.end(),
+                      [](const std::pair<uint64_t, float> &a, const std::pair<uint64_t, float> &b) {
+                          return a.second > b.second;
+                      });
+
+    // 获取前 k 个
+    for(int i=0; i<k; ++i)
     {
-        std::pair<float, uint64_t> top = pq.top();
-        pq.pop();
-        uint64_t key = top.second;
-        std::string value = get(key);
-        res.emplace_back(key, value);
+        res.push_back(std::make_pair(ksimTable[i].first, get(ksimTable[i].first)));
     }
 
     return res;
