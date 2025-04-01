@@ -37,6 +37,7 @@ endfunction()
 add_lsm_executable(correctness correctness.cc)
 add_lsm_executable(persistence persistence.cc)
 add_lsm_executable(performance performance.cc)
+add_lsm_executable(e2e_test E2E_test.cpp)
 
 # 添加子目录
 add_subdirectory(third_party/llama.cpp)

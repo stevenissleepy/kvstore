@@ -1,9 +1,9 @@
 #include "kvstore.h"
 
+#include "embedding.h"
 #include "skiplist.h"
 #include "sstable.h"
 #include "utils.h"
-#include "embedding.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -39,7 +39,7 @@ bool KVStore::sstable_num_out_of_limit(int level) {
 std::vector<float> KVStore::str2vec(const std::string &s) {
     std::vector<std::string> words;
     words.push_back(s);
-    std::string joined = join(words, "\n");
+    std::string joined                   = join(words, "\n");
     std::vector<std::vector<float>> vecs = embedding(joined);
     return vecs[0];
 }
@@ -65,8 +65,7 @@ KVStore::KVStore(const std::string &dir) :
     }
 }
 
-KVStore::~KVStore()
-{
+KVStore::~KVStore() {
     sstable ss(s);
     if (!ss.getCnt())
         return; // empty sstable
@@ -222,7 +221,6 @@ struct cmp {
     }
 };
 
-
 void KVStore::scan(uint64_t key1, uint64_t key2, std::list<std::pair<uint64_t, std::string>> &list) {
     std::vector<std::pair<uint64_t, std::string>> mem;
     // std::set<myPair> heap; // 维护一个指针最小堆
@@ -286,15 +284,14 @@ void KVStore::scan(uint64_t key1, uint64_t key2, std::list<std::pair<uint64_t, s
     }
 }
 
-
 void KVStore::compaction() {
     int curLevel = 0;
     // TODO here
 
-    while(sstable_num_out_of_limit(curLevel)) {
+    while (sstable_num_out_of_limit(curLevel)) {
         // 如果下一层的文件夹不存在，则创建
-        std::string path = std::string("./data/level-") + std::to_string(curLevel+1);
-        if(!utils::dirExists(path)) {
+        std::string path = std::string("./data/level-") + std::to_string(curLevel + 1);
+        if (!utils::dirExists(path)) {
             utils::mkdir(path.data());
         }
 
@@ -302,22 +299,22 @@ void KVStore::compaction() {
         // level-n 取超出限制的 sstable
         std::vector<sstablehead> ssts;
         int size = sstableIndex[curLevel].size();
-        size -= (1<<(curLevel+1));          // 多出来的 sstable 个数
-        size = (curLevel == 0) ? 3 : size;  // level-0 取3个 sstable
-        for(int i=0; i<size; ++i) {
+        size -= (1 << (curLevel + 1));     // 多出来的 sstable 个数
+        size = (curLevel == 0) ? 3 : size; // level-0 取3个 sstable
+        for (int i = 0; i < size; ++i) {
             ssts.push_back(sstableIndex[curLevel][i]);
         }
 
         // 取 ssts 中的 key 区间
         uint64_t minKey = INF, maxKey = 0;
-        for (sstablehead& it : ssts) {
+        for (sstablehead &it : ssts) {
             minKey = std::min(minKey, it.getMinV());
             maxKey = std::max(maxKey, it.getMaxV());
         }
 
         // 找出 level-(n+1) 中 key 值在区间内的 sstable
-        for (sstablehead& it : sstableIndex[curLevel+1]) {
-            if(it.getMinV() <= maxKey && it.getMaxV() >= minKey) {
+        for (sstablehead &it : sstableIndex[curLevel + 1]) {
+            if (it.getMinV() <= maxKey && it.getMaxV() >= minKey) {
                 ssts.push_back(it);
             }
         }
@@ -329,13 +326,13 @@ void KVStore::compaction() {
 
         // 合并 ssts 中的 sstable
         std::map<uint64_t, std::string> pairs;
-        for(sstablehead& it : ssts) {
+        for (sstablehead &it : ssts) {
             sstable ss(it);
             int cnt = ss.getCnt();
-            for(int i=0; i< cnt; ++i) {
-                uint64_t key = ss.getKey(i);
+            for (int i = 0; i < cnt; ++i) {
+                uint64_t key    = ss.getKey(i);
                 std::string val = ss.getData(i);
-                pairs[key] = val;
+                pairs[key]      = val;
             }
             delsstable(it.getFilename());
         }
@@ -343,28 +340,28 @@ void KVStore::compaction() {
         // 生成新的 sstable
         sstable newSs;
         uint32_t maxNameSuffix = 0;
-        for(sstablehead& it: sstableIndex[curLevel+1]) {
-            maxNameSuffix = it.getTime()==maxTime ? std::max(maxNameSuffix, it.getNameSuf()) : maxNameSuffix;
+        for (sstablehead &it : sstableIndex[curLevel + 1]) {
+            maxNameSuffix = it.getTime() == maxTime ? std::max(maxNameSuffix, it.getNameSuf()) : maxNameSuffix;
         }
         newSs.setTime(maxTime);             // 时间戳为 ssts 中最大的时间戳
         newSs.setNamesuffix(maxNameSuffix); // 保证文件名不会重复
 
-        for(auto it: pairs) {
-            if(newSs.checkSize(it.second, curLevel+1, 0)){
-                addsstable(newSs, curLevel+1);
+        for (auto it : pairs) {
+            if (newSs.checkSize(it.second, curLevel + 1, 0)) {
+                addsstable(newSs, curLevel + 1);
                 newSs.reset();
             }
             // 如果是最后一层，且 key 对应的 value 为 DEL，则不插入
-            if(curLevel+1 == totalLevel && it.second == DEL) {
+            if (curLevel + 1 == totalLevel && it.second == DEL) {
                 continue;
             }
             newSs.insert(it.first, it.second);
         }
-        newSs.checkSize("", curLevel+1, 1);
-        addsstable(newSs, curLevel+1);
-        
+        newSs.checkSize("", curLevel + 1, 1);
+        addsstable(newSs, curLevel + 1);
+
         // 将 sstableIndex[curLevel+1] 排序
-        std::sort(sstableIndex[curLevel+1].begin(), sstableIndex[curLevel+1].end());
+        std::sort(sstableIndex[curLevel + 1].begin(), sstableIndex[curLevel + 1].end());
 
         curLevel++;
     }
@@ -412,12 +409,41 @@ char strBuf[2097152];
  */
 std::string KVStore::fetchString(std::string file, int startOffset, uint32_t len) {
     // TODO here
-    FILE* fp = fopen(file.data(), "rb");
-    if(fp == nullptr) {
+    FILE *fp = fopen(file.data(), "rb");
+    if (fp == nullptr) {
         throw std::runtime_error("open file failed");
     }
     fseek(fp, startOffset, SEEK_SET);
     fread(strBuf, 1, len, fp);
     fclose(fp);
     return std::string(strBuf, len);
+}
+
+std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::string query, int k) {
+    std::vector<std::pair<std::uint64_t, std::string>> res;
+    std::vector<float> vec = str2vec(query);
+    size_t n_embd = vec.size();
+
+    std::priority_queue<std::pair<float, uint64_t>> pq; // max-heap to store top-k results
+
+    // 找到最接近的 key
+    for (const auto &it : kvecTable) {
+        float similarity = common_embd_similarity_cos(vec.data(), it.second.data(), n_embd);
+        pq.emplace(similarity, it.first);
+        if (pq.size() > k) {
+            pq.pop(); // Keep only the top-k elements
+        }
+    }
+
+    // 找到 key-value
+    while (!pq.empty())
+    {
+        std::pair<float, uint64_t> top = pq.top();
+        pq.pop();
+        uint64_t key = top.second;
+        std::string value = get(key);
+        res.emplace_back(key, value);
+    }
+
+    return res;
 }
