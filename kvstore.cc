@@ -3,6 +3,7 @@
 #include "skiplist.h"
 #include "sstable.h"
 #include "utils.h"
+#include "embedding.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -33,6 +34,14 @@ struct cmpPoi {
 bool KVStore::sstable_num_out_of_limit(int level) {
     int limit = 1 << (level + 1); // 2^(k+1)
     return sstableIndex[level].size() > limit;
+}
+
+std::vector<float> KVStore::str2vec(const std::string &s) {
+    std::vector<std::string> words;
+    words.push_back(s);
+    std::string joined = join(words, "\n");
+    std::vector<std::vector<float>> vecs = embedding(joined);
+    return vecs[0];
 }
 
 KVStore::KVStore(const std::string &dir) :
@@ -75,6 +84,10 @@ KVStore::~KVStore()
  * No return values for simplicity.
  */
 void KVStore::put(uint64_t key, const std::string &val) {
+    // put key-vector
+    kvecTable[key] = str2vec(val);
+
+    // put key-value
     uint32_t nxtsize = s->getBytes();
     std::string res  = s->search(key);
     if (!res.length()) { // new add

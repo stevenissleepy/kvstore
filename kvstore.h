@@ -12,14 +12,15 @@ class KVStore : public KVStoreAPI {
 private:
     // You can add your implementation here
     bool sstable_num_out_of_limit(int level);
+    std::vector<float> str2vec(const std::string &s);
 
 private:
-    skiplist *s = new skiplist(0.5); // memtable
-    // std::vector<sstablehead> sstableIndex;  // sstable的表头缓存
+    skiplist *s = new skiplist(0.5);            // memtable
+    std::vector<sstablehead> sstableIndex[15];  // the sshead for each level
+    int totalLevel = -1;                        // 层数
 
-    std::vector<sstablehead> sstableIndex[15]; // the sshead for each level
+    std::map<uint64_t, std::vector<float>> kvecTable; // key-vector table
 
-    int totalLevel = -1; // 层数
 public:
     KVStore(const std::string &dir);
 
