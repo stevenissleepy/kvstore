@@ -36,14 +36,6 @@ bool KVStore::sstable_num_out_of_limit(int level) {
     return sstableIndex[level].size() > limit;
 }
 
-std::vector<float> KVStore::str2vec(const std::string &s) {
-    std::vector<std::string> words;
-    words.push_back(s);
-    std::string joined                   = join(words, "\n");
-    std::vector<std::vector<float>> vecs = embedding(joined);
-    return vecs[0];
-}
-
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
 {
@@ -84,7 +76,7 @@ KVStore::~KVStore() {
  */
 void KVStore::put(uint64_t key, const std::string &val) {
     // put key-vector
-    kvecTable[key] = str2vec(val);
+    kvecTable[key] = embedding_single(val);
 
     // put key-value
     uint32_t nxtsize = s->getBytes();
@@ -421,7 +413,7 @@ std::string KVStore::fetchString(std::string file, int startOffset, uint32_t len
 
 std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::string query, int k) {
     std::vector<std::pair<std::uint64_t, std::string>> res;
-    std::vector<float> vec = str2vec(query);
+    std::vector<float> vec = embedding_single(query);
     size_t n_embd = vec.size();
 
     // 获取每个 kv 与目标的余弦相似度

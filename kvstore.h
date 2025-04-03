@@ -11,7 +11,6 @@
 class KVStore : public KVStoreAPI {
 private:
     bool sstable_num_out_of_limit(int level);
-    std::vector<float> str2vec(const std::string &s);
 
 private:
     // key-value
