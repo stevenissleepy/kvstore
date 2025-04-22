@@ -10,13 +10,13 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
     nodes[id] = new_node;
 
     // 第一个节点
-    if (enter_point == -1) { 
+    if (enter_point == -1) {
         enter_point = id;
         return;
     }
 
     // 从最高层向下插入
-    int layer = random_level();
+    int layer           = random_level();
     std::vector<int> ep = {enter_point};
     for (int l = max_layers - 1; l >= 0; l--) {
         // 搜索当前层的最近邻
@@ -33,17 +33,17 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
 }
 
 std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
-    std::vector<float> query_vec = q;
-    std::vector<int> ep          = {enter_point};
 
-    // 从顶层向下搜索
-    for (int l = max_layers - 1; l >= 0; l--) {
-        ep = search_layer(query_vec, ep, ef_construction, l);
+    // 从顶层向下搜索到倒数第二层
+    int ep = enter_point;
+    for (int l = max_layers - 1; l >= 1; l--) {
+        std::vector<int> W = search_layer(q, ep, ef_construction, l);
+        ep = W[0];
     }
 
-    // 获取最终结果
-    auto candidates = search_layer(query_vec, ep, k, 0);
-    return std::vector<int>(candidates.begin(), candidates.begin() + k);
+    // 在底层搜索
+    std::vector<int> result = search_layer(q, ep, ef_construction, 0);
+    return result;
 }
 
 int HNSW::random_level() {
@@ -51,7 +51,7 @@ int HNSW::random_level() {
     return std::min((int)-exp(rng), max_layers - 1);
 }
 
-std::vector<int> HNSW::search_layer(const std::vector<float> &q, const std::vector<int> &ep, int ef, int layer) {
+std::vector<int> HNSW::search_layer(const std::vector<float> &q, int ep, int ef, int layer) {
     using HeapItem = std::pair<float, int>;
     std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<>> candidates;
     std::unordered_map<int, bool> visited;

@@ -33,11 +33,11 @@ private:
     int random_level();
 
     // 在指定层搜索
-    std::vector<int> search_layer(const std::vector<float> &q, const std::vector<int> &ep, int ef, int layer); 
+    std::vector<int> search_layer(const std::vector<float> &q, int ep, int ef, int layer);
 
     // 连接两个节点
-    void connect(int a, int b, int layer); 
+    void connect(int a, int b, int layer);
 
     // 计算欧氏距离
-    float euclidean_distance(const std::vector<float> &a, const std::vector<float> &b); 
+    float euclidean_distance(const std::vector<float> &a, const std::vector<float> &b);
 };
