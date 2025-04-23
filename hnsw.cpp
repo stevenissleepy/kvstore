@@ -1,6 +1,5 @@
 #include "hnsw.h"
 
-// 构造函数：初始化参数和各层节点结构
 HNSW::HNSW(int ml, int m, int ef) :
     max_layers(ml),
     M(m),
@@ -10,7 +9,6 @@ HNSW::HNSW(int ml, int m, int ef) :
     layers.resize(max_layers); // 每层初始化为空
 }
 
-// 生成随机层数，指数衰减概率（0.5每层）
 int HNSW::random_level() {
     std::uniform_real_distribution<float> dist(0.0, 1.0);
     int level = 0;
@@ -20,7 +18,6 @@ int HNSW::random_level() {
     return level;
 }
 
-// 计算欧氏距离（带平方根）
 float HNSW::euclidean_distance(const std::vector<float> &a, const std::vector<float> &b) {
     float sum = 0.0f;
     for (size_t i = 0; i < a.size(); ++i) {
@@ -54,7 +51,7 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
 
     // 广搜+贪心
     while (!candidates.empty()) {
-        int curr_id   = candidates.top();
+        int curr_id     = candidates.top();
         float curr_dist = euclidean_distance(q, nodes[curr_id].vec);
         candidates.pop();
 
@@ -94,7 +91,6 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
     return output;
 }
 
-// 连接两个节点，并修剪邻居到最多M个
 void HNSW::connect(int a, int b, int layer) {
     auto &node_a = layers[layer][a];
     auto &node_b = layers[layer][b];
@@ -120,41 +116,41 @@ void HNSW::connect(int a, int b, int layer) {
     }
 }
 
-// 插入新节点到HNSW
 void HNSW::insert(int id, const std::vector<float> &vec) {
     int layer = random_level();
+    int ep;
 
-    // 插入新节点
+    /* 插入新节点 */
     for (int i = 0; i <= layer; ++i) {
         layers[i][id] = {id, vec, {}};
     }
 
-    // 处理连接
-    int ep = layers[top_layer].begin()->first;
+    /* 处理连接 */
+    if (top_layer != -1) {
+        ep = layers[top_layer].begin()->first;
+    }
     for (int i = top_layer; i >= 0; --i) {
         std::vector<int> neighbors = search_layer(vec, M, ep, i);
         ep                         = neighbors[0];
 
-        // 连接新节点和邻居
-        if (i <= layer) {
+        if (i <= layer) { // 连接新节点和邻居
             for (int neighbor : neighbors) {
                 connect(id, neighbor, i);
             }
         }
     }
 
-    // 更新顶层
+    /* 更新顶层 */
     top_layer = std::max(top_layer, layer);
 }
 
-// 查询最近的k个邻居
 std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
     int ep = layers[top_layer].begin()->first;
     std::vector<int> neighbors;
 
     for (int i = top_layer; i >= 0; --i) {
         neighbors = search_layer(q, k, ep, i);
-        ep = neighbors[0];
+        ep        = neighbors[0];
     }
 
     return neighbors;
