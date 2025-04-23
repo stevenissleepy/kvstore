@@ -118,7 +118,7 @@ void HNSW::connect(int a, int b, int layer) {
 
 void HNSW::insert(int id, const std::vector<float> &vec) {
     int layer = random_level();
-    int ep;
+    int ep    = top_layer == -1 ? -1 : layers[top_layer].begin()->first;
 
     /* 插入新节点 */
     for (int i = 0; i <= layer; ++i) {
@@ -126,9 +126,6 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
     }
 
     /* 处理连接 */
-    if (top_layer != -1) {
-        ep = layers[top_layer].begin()->first;
-    }
     for (int i = top_layer; i >= 0; --i) {
         std::vector<int> neighbors = search_layer(vec, M, ep, i);
         ep                         = neighbors[0];
