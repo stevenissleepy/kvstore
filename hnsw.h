@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <fstream>
 
 class HNSW {
 private:
@@ -29,6 +30,7 @@ public:
 
     void insert(int id, const std::vector<float> &vec);
     std::vector<int> query(const std::vector<float> &q, int k);
+    void check_layers();
 
 private:
     int random_level();

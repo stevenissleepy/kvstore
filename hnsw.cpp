@@ -152,3 +152,28 @@ std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
 
     return neighbors;
 }
+
+void HNSW::check_layers() {
+    std::ofstream out("layers.txt");
+
+    for (int i = top_layer; i >=0; --i) {
+        out << "Layer " << i << ":\n";
+
+        // 遍历当前层的所有节点
+        for (const auto &node_pair : layers[i]) {
+            int node_id      = node_pair.first;
+            const Node &node = node_pair.second;
+
+            // 输出节点及其邻居
+            out << "Node " << node_id << ": ";
+            for (int neighbor : node.neighbors) {
+                out << neighbor << " ";
+            }
+            out << "\n";
+        }
+
+        out << "\n";
+    }
+
+    out.close();
+}
