@@ -18,6 +18,7 @@ private:
     };
 
     int max_layers;                                    // 最大层数
+    int top_layer;                                     // 当前顶层
     int M;                                             // 每个节点最大连接数
     int ef_construction;                               // 动态候选集大小
     std::vector<std::unordered_map<int, Node>> layers; // 各层的节点
@@ -33,7 +34,7 @@ private:
     int random_level();
 
     // 在指定层搜索
-    std::vector<int> search_layer(const std::vector<float> &q, int k, int ep, int ef, int layer);
+    std::vector<int> search_layer(const std::vector<float> &q, int k, int ep, int layer);
 
     // 连接两个节点
     void connect(int a, int b, int layer);
