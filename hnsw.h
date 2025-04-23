@@ -1,14 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include <cmath>
-#include <iostream>
-#include <queue>
 #include <random>
+#include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
-#include <fstream>
 
 class HNSW {
 private:
@@ -26,7 +21,7 @@ private:
     std::mt19937 rng;                                  // 随机数生成器
 
 public:
-    HNSW(int ml = 5, int m = 16, int ef = 200);
+    HNSW(int ml = 6, int m = 6, int ef = 30);
 
     void insert(int id, const std::vector<float> &vec);
     std::vector<int> query(const std::vector<float> &q, int k);
@@ -35,12 +30,10 @@ public:
 private:
     int random_level();
 
-    // 在指定层搜索
     std::vector<int> search_layer(const std::vector<float> &q, int k, int ep, int layer);
 
-    // 连接两个节点
     void connect(int a, int b, int layer);
 
-    // 计算欧氏距离
     float euclidean_distance(const std::vector<float> &a, const std::vector<float> &b);
+    float similarity_cos(const std::vector<float> &a, const std::vector<float> &b);
 };

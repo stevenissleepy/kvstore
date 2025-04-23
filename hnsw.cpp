@@ -1,5 +1,10 @@
 #include "hnsw.h"
 
+#include <assert.h>
+#include <queue>
+#include <algorithm>
+#include <fstream>
+
 HNSW::HNSW(int ml, int m, int ef) :
     max_layers(ml),
     M(m),
@@ -27,6 +32,33 @@ float HNSW::euclidean_distance(const std::vector<float> &a, const std::vector<fl
     return std::sqrt(sum);
 }
 
+float HNSW::similarity_cos(const std::vector<float> &a, const std::vector<float> &b) {
+    int n1 = a.size();
+    int n2 = b.size();
+    assert(n1 == n2);
+    int n = n1;
+
+    double sum  = 0.0;
+    double sum1 = 0.0;
+    double sum2 = 0.0;
+
+    for (int i = 0; i < n; i++) {
+        sum += a[i] * b[i];
+        sum1 += a[i] * a[i];
+        sum2 += b[i] * b[i];
+    }
+
+    // Handle the case where one or both vectors are zero vectors
+    if (sum1 == 0.0 || sum2 == 0.0) {
+        if (sum1 == 0.0 && sum2 == 0.0) {
+            return 1.0f; // two zero vectors are similar
+        }
+        return 0.0f;
+    }
+
+    return sum / (sqrt(sum1) * sqrt(sum2));
+}
+
 /**
  * 在指定层搜索最近邻
  *
@@ -40,7 +72,7 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
     std::unordered_map<int, Node> &nodes = layers[layer];
     std::unordered_set<int> visited;
     auto cmp = [&](int a_id, int b_id) {
-        return euclidean_distance(q, nodes[a_id].vec) > euclidean_distance(q, nodes[b_id].vec);
+        return similarity_cos(q, nodes[a_id].vec) < similarity_cos(q, nodes[b_id].vec);
     };
     std::priority_queue<int, std::vector<int>, decltype(cmp)> candidates(cmp);
     std::priority_queue<std::pair<float, int>> result;
@@ -52,15 +84,15 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
     // 广搜+贪心
     while (!candidates.empty()) {
         int curr_id     = candidates.top();
-        float curr_dist = euclidean_distance(q, nodes[curr_id].vec);
+        float curr_sim = similarity_cos(q, nodes[curr_id].vec);
         candidates.pop();
 
         // 检查当前节点是否够近
         if (result.size() < k) {
-            result.push({curr_dist, curr_id});
-        } else if (curr_dist < result.top().first) {
+            result.push({curr_sim, curr_id});
+        } else if (curr_sim > result.top().first) {
             result.pop();
-            result.push({curr_dist, curr_id});
+            result.push({curr_sim, curr_id});
         }
 
         // 遍历当前节点的邻居
@@ -70,8 +102,8 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
                 continue;
 
             visited.insert(neighbor);
-            float dist = euclidean_distance(q, nodes[neighbor].vec);
-            if (dist < curr_dist || result.size() < k) {
+            float sim = similarity_cos(q, nodes[neighbor].vec);
+            if (sim > curr_sim || result.size() < k) {
                 candidates.push(neighbor);
             }
         }
@@ -98,8 +130,8 @@ void HNSW::connect(int a, int b, int layer) {
     // 将b加入a的邻居并排序修剪
     node_a.neighbors.push_back(b);
     std::sort(node_a.neighbors.begin(), node_a.neighbors.end(), [&](int x, int y) {
-        return euclidean_distance(node_a.vec, layers[layer].at(x).vec) <
-               euclidean_distance(node_a.vec, layers[layer].at(y).vec);
+        return similarity_cos(node_a.vec, layers[layer].at(x).vec) >
+               similarity_cos(node_a.vec, layers[layer].at(y).vec);
     });
     if (node_a.neighbors.size() > M) {
         node_a.neighbors.resize(M);
@@ -108,8 +140,8 @@ void HNSW::connect(int a, int b, int layer) {
     // 将a加入b的邻居并排序修剪（双向连接）
     node_b.neighbors.push_back(a);
     std::sort(node_b.neighbors.begin(), node_b.neighbors.end(), [&](int x, int y) {
-        return euclidean_distance(node_b.vec, layers[layer].at(x).vec) <
-               euclidean_distance(node_b.vec, layers[layer].at(y).vec);
+        return similarity_cos(node_b.vec, layers[layer].at(x).vec) >
+               similarity_cos(node_b.vec, layers[layer].at(y).vec);
     });
     if (node_b.neighbors.size() > M) {
         node_b.neighbors.resize(M);
@@ -156,7 +188,7 @@ std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
 void HNSW::check_layers() {
     std::ofstream out("layers.txt");
 
-    for (int i = top_layer; i >=0; --i) {
+    for (int i = top_layer; i >= 0; --i) {
         out << "Layer " << i << ":\n";
 
         // 遍历当前层的所有节点
