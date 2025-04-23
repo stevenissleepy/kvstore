@@ -16,11 +16,12 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
     }
 
     // 从最高层向下插入
-    int layer           = random_level();
-    std::vector<int> ep = {enter_point};
+    int layer = random_level();
+    int ep    = enter_point;
     for (int l = max_layers - 1; l >= 0; l--) {
         // 搜索当前层的最近邻
-        auto W = search_layer(vec, ep, 1, l);
+        std::vector<int> W = search_layer(vec, ep, 1, l);
+        ep                 = W[0];
 
         // 连接新节点
         if (l <= layer) {
@@ -108,9 +109,17 @@ void HNSW::connect(int a, int b, int layer) {
     if (std::find(neighbors.begin(), neighbors.end(), b) == neighbors.end()) {
         neighbors.push_back(b);
         if (neighbors.size() > M) {
-            // 保留距离最近的M个邻居
-            // （此处简化处理，实际需要按距离排序）
-            neighbors.resize(M);
+            std::priority_queue<std::pair<float, int>> neighbor_distances;
+            for (int neighbor : neighbors) {
+                float dist = euclidean_distance(nodes[a].vec, nodes[neighbor].vec);
+                neighbor_distances.push({dist, neighbor});
+            }
+
+            neighbors.clear();
+            while (neighbors.size() < M && !neighbor_distances.empty()) {
+                neighbors.push_back(neighbor_distances.top().second);
+                neighbor_distances.pop();
+            }
         }
     }
 }
