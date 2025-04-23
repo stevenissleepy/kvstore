@@ -141,24 +141,13 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
 
 // 查询最近的k个邻居
 std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
-    // 查找顶层入口点
-    int top_layer = max_layers - 1;
-    while (top_layer >= 0 && layers[top_layer].empty()) {
-        top_layer--;
-    }
-    if (top_layer < 0)
-        return {};
+    int ep = layers[top_layer].begin()->first;
+    std::vector<int> neighbors;
 
-    std::vector<int> eps = {layers[top_layer].begin()->first};
-
-    // 从顶层到0层搜索
-    for (int layer = top_layer; layer >= 0; --layer) {
-        eps = search_layer(q, 1, eps[0], layer);
+    for (int i = top_layer; i >= 0; --i) {
+        neighbors = search_layer(q, k, ep, i);
+        ep = neighbors[0];
     }
 
-    // 返回前k个结果
-    if (eps.size() > k) {
-        eps.resize(k);
-    }
-    return eps;
+    return neighbors;
 }
