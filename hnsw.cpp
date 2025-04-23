@@ -48,8 +48,12 @@ std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
 }
 
 int HNSW::random_level() {
-    std::exponential_distribution<double> exp(1.0);
-    return std::min((int)-exp(rng), max_layers - 1);
+    std::uniform_real_distribution<float> dist(0.0, 1.0);
+    int level = 0;
+    while (dist(rng) < 0.5f && level < max_layers - 1) {
+        level++;
+    }
+    return level;
 }
 
 std::vector<int> HNSW::search_layer(const std::vector<float> &q, int ep, int ef, int layer) {
