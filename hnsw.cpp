@@ -1,9 +1,15 @@
 #include "hnsw.h"
 
-#include <assert.h>
-#include <queue>
 #include <algorithm>
+#include <assert.h>
 #include <fstream>
+#include <queue>
+
+using std::vector;
+using std::unordered_map;
+using std::unordered_set;
+using std::priority_queue;
+using std::pair;
 
 HNSW::HNSW(int ml, int m, int ef) :
     max_layers(ml),
@@ -23,7 +29,7 @@ int HNSW::random_level() {
     return level;
 }
 
-float HNSW::euclidean_distance(const std::vector<float> &a, const std::vector<float> &b) {
+float HNSW::euclidean_distance(const vector<float> &a, const vector<float> &b) {
     float sum = 0.0f;
     for (size_t i = 0; i < a.size(); ++i) {
         float diff = a[i] - b[i];
@@ -32,7 +38,7 @@ float HNSW::euclidean_distance(const std::vector<float> &a, const std::vector<fl
     return std::sqrt(sum);
 }
 
-float HNSW::similarity_cos(const std::vector<float> &a, const std::vector<float> &b) {
+float HNSW::similarity_cos(const vector<float> &a, const vector<float> &b) {
     int n1 = a.size();
     int n2 = b.size();
     assert(n1 == n2);
@@ -68,14 +74,14 @@ float HNSW::similarity_cos(const std::vector<float> &a, const std::vector<float>
  * @param layer 当前层
  * @return 返回最近邻的节点ID
  */
-std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, int layer) {
-    std::unordered_map<int, Node> &nodes = layers[layer];
-    std::unordered_set<int> visited;
+vector<int> HNSW::search_layer(const vector<float> &q, int k, int ep, int layer) {
+    unordered_map<int, Node> &nodes = layers[layer];
+    unordered_set<int> visited;
     auto cmp = [&](int a_id, int b_id) {
         return similarity_cos(q, nodes[a_id].vec) < similarity_cos(q, nodes[b_id].vec);
     };
-    std::priority_queue<int, std::vector<int>, decltype(cmp)> candidates(cmp);
-    std::priority_queue<std::pair<float, int>> result;
+    priority_queue<int, vector<int>, decltype(cmp)> candidates(cmp);
+    priority_queue<pair<float, int>> result;
 
     // 将起点放入候选队列和结果队列
     candidates.push(ep);
@@ -83,7 +89,7 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
 
     // 广搜+贪心
     while (!candidates.empty()) {
-        int curr_id     = candidates.top();
+        int curr_id    = candidates.top();
         float curr_sim = similarity_cos(q, nodes[curr_id].vec);
         candidates.pop();
 
@@ -114,8 +120,8 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
         }
     }
 
-    // 按距离从小到大排序结果
-    std::vector<int> output;
+    // 按相似度从大到小排序
+    vector<int> output;
     while (!result.empty()) {
         output.insert(output.begin(), result.top().second);
         result.pop();
@@ -148,7 +154,7 @@ void HNSW::connect(int a, int b, int layer) {
     }
 }
 
-void HNSW::insert(int id, const std::vector<float> &vec) {
+void HNSW::insert(int id, const vector<float> &vec) {
     int layer = random_level();
     int ep    = top_layer == -1 ? -1 : layers[top_layer].begin()->first;
 
@@ -159,7 +165,7 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
 
     /* 处理连接 */
     for (int i = top_layer; i >= 0; --i) {
-        std::vector<int> neighbors = search_layer(vec, M, ep, i);
+        vector<int> neighbors = search_layer(vec, M, ep, i);
         ep                         = neighbors[0];
 
         if (i <= layer) { // 连接新节点和邻居
@@ -173,9 +179,9 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
     top_layer = std::max(top_layer, layer);
 }
 
-std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
+vector<int> HNSW::query(const vector<float> &q, int k) {
     int ep = layers[top_layer].begin()->first;
-    std::vector<int> neighbors;
+    vector<int> neighbors;
 
     for (int i = top_layer; i >= 0; --i) {
         neighbors = search_layer(q, k, ep, i);
