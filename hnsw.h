@@ -17,11 +17,11 @@ private:
         std::vector<int> neighbors;
     };
 
-    int max_layers;                                   // 最大层数
-    int M;                                            // 每个节点最大连接数
-    int ef_construction;                              // 动态候选集大小
-    std::vector<std::unordered_map<int, Node>> nodes; // 各层的节点
-    std::mt19937 rng;                                 // 随机数生成器
+    int max_layers;                                    // 最大层数
+    int M;                                             // 每个节点最大连接数
+    int ef_construction;                               // 动态候选集大小
+    std::vector<std::unordered_map<int, Node>> layers; // 各层的节点
+    std::mt19937 rng;                                  // 随机数生成器
 
 public:
     HNSW(int ml = 5, int m = 16, int ef = 200);
@@ -33,7 +33,7 @@ private:
     int random_level();
 
     // 在指定层搜索
-    std::vector<int> search_layer(const std::vector<float> &q, int ep, int ef, int layer);
+    std::vector<int> search_layer(const std::vector<float> &q, int k, int ep, int ef, int layer);
 
     // 连接两个节点
     void connect(int a, int b, int layer);
