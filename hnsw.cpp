@@ -38,7 +38,7 @@ std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
     int ep = enter_point;
     for (int l = max_layers - 1; l >= 1; l--) {
         std::vector<int> W = search_layer(q, ep, ef_construction, l);
-        ep = W[0];
+        ep                 = W[0];
     }
 
     // 在底层搜索
@@ -52,30 +52,42 @@ int HNSW::random_level() {
 }
 
 std::vector<int> HNSW::search_layer(const std::vector<float> &q, int ep, int ef, int layer) {
-    using HeapItem = std::pair<float, int>;
-    std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<>> candidates;
-    std::unordered_map<int, bool> visited;
+    using Candidate = std::pair<float, int>;                                           // {距离, 节点ID}
+    std::priority_queue<Candidate, std::vector<Candidate>, std::greater<>> candidates; // 最小堆，用于扩展
+    std::priority_queue<Candidate> top_candidates;                                     // 最大堆，用于存储结果
+    std::unordered_set<int> visited;                                                   // 记录访问过的节点
 
     // 初始化候选集
-    for (int node_id : ep) {
-        float dist = euclidean_distance(q, nodes[node_id].vec);
-        candidates.push({dist, node_id});
-        visited[node_id] = true;
-    }
+    float dist = euclidean_distance(q, nodes[ep].vec);
+    candidates.push({dist, ep});
+    top_candidates.push({dist, ep});
+    visited.insert(ep);
 
-    // 扩展搜索
+    // 开始搜索
     while (!candidates.empty()) {
-        auto current = candidates.top();
+        auto [cur_dist, cur_node] = candidates.top();
         candidates.pop();
 
-        for (int neighbor : nodes[current.second].neighbors[layer]) {
-            if (!visited[neighbor]) {
-                visited[neighbor] = true;
-                float dist        = euclidean_distance(q, nodes[neighbor].vec);
-                if (candidates.size() < ef || dist < candidates.top().first) {
-                    candidates.push({dist, neighbor});
-                    if (candidates.size() > ef)
-                        candidates.pop();
+        // 如果当前节点的距离大于结果集中最远的距离，停止扩展
+        if (top_candidates.size() >= ef && cur_dist > top_candidates.top().first) {
+            break;
+        }
+
+        // 遍历当前节点的邻居
+        for (int neighbor : nodes[cur_node].neighbors[layer]) {
+            if (visited.find(neighbor) == visited.end()) {
+                visited.insert(neighbor);
+                float neighbor_dist = euclidean_distance(q, nodes[neighbor].vec);
+
+                // 更新候选集和结果集
+                if (top_candidates.size() < ef || neighbor_dist < top_candidates.top().first) {
+                    candidates.push({neighbor_dist, neighbor});
+                    top_candidates.push({neighbor_dist, neighbor});
+                }
+
+                // 如果结果集超过k个，移除最远的
+                if (top_candidates.size() > ef) {
+                    top_candidates.pop();
                 }
             }
         }
@@ -83,11 +95,11 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int ep, int ef,
 
     // 提取结果
     std::vector<int> result;
-    while (!candidates.empty()) {
-        result.push_back(candidates.top().second);
-        candidates.pop();
+    while (!top_candidates.empty()) {
+        result.push_back(top_candidates.top().second);
+        top_candidates.pop();
     }
-    std::reverse(result.begin(), result.end());
+    std::reverse(result.begin(), result.end()); // 按距离从小到大排序
     return result;
 }
 
