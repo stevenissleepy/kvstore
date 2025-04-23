@@ -1,133 +1,158 @@
 #include "hnsw.h"
 
-HNSW::HNSW(int ml, int m, int ef) : max_layers(ml), M(m), ef_construction(ef), enter_point(-1) {
-    std::random_device rd;
-    rng.seed(rd());
+// 构造函数：初始化参数和各层节点结构
+HNSW::HNSW(int ml, int m, int ef)
+    : max_layers(ml), M(m), ef_construction(ef), rng(std::random_device{}()) {
+    nodes.resize(max_layers); // 每层初始化为空
 }
 
-void HNSW::insert(int id, const std::vector<float> &vec) {
-    Node new_node{id, vec, {}};
-    nodes[id] = new_node;
-
-    // 第一个节点
-    if (enter_point == -1) {
-        enter_point = id;
-        return;
-    }
-
-    // 从最高层向下插入
-    int layer = random_level();
-    int ep    = enter_point;
-    for (int l = max_layers - 1; l >= 0; l--) {
-        // 搜索当前层的最近邻
-        std::vector<int> W = search_layer(vec, ep, M, l);
-        ep                 = W[0];
-
-        // 连接新节点
-        if (l <= layer) {
-            for (int neighbor : W) {
-                connect(id, neighbor, l);
-                connect(neighbor, id, l);
-            }
-        }
-    }
-}
-
-std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
-
-    // 从顶层向下搜索到倒数第二层
-    int ep = enter_point;
-    for (int l = max_layers - 1; l >= 1; l--) {
-        std::vector<int> W = search_layer(q, ep, ef_construction, l);
-        ep                 = W[0];
-    }
-
-    // 在底层搜索
-    std::vector<int> result = search_layer(q, ep, k, 0);
-    return result;
-}
-
+// 生成随机层数，指数衰减概率（0.5每层）
 int HNSW::random_level() {
     std::uniform_real_distribution<float> dist(0.0, 1.0);
     int level = 0;
-    while (dist(rng) < 0.5f && level < max_layers - 1) {
+    while (dist(rng) < 0.5 && level < max_layers - 1) {
         level++;
     }
     return level;
 }
 
-std::vector<int> HNSW::search_layer(const std::vector<float> &q, int ep, int ef, int layer) {
-    using Candidate = std::pair<float, int>;                                           // {距离, 节点ID}
-    std::priority_queue<Candidate, std::vector<Candidate>, std::greater<>> candidates; // 最小堆，用于扩展
-    std::priority_queue<Candidate> top_candidates;                                     // 最大堆，用于存储结果
-    std::unordered_set<int> visited;                                                   // 记录访问过的节点
-
-    // 初始化候选集
-    float dist = euclidean_distance(q, nodes[ep].vec);
-    candidates.push({dist, ep});
-    top_candidates.push({dist, ep});
-    visited.insert(ep);
-
-    // 开始搜索
-    while (!candidates.empty()) {
-        auto [cur_dist, cur_node] = candidates.top();
-        candidates.pop();
-
-        // 遍历当前节点的邻居
-        for (int neighbor : nodes[cur_node].neighbors[layer]) {
-            if (visited.find(neighbor) == visited.end()) {
-                visited.insert(neighbor);
-                float neighbor_dist = euclidean_distance(q, nodes[neighbor].vec);
-
-                // 更新候选集和结果集
-                if (top_candidates.size() < ef || neighbor_dist < top_candidates.top().first) {
-                    candidates.push({neighbor_dist, neighbor});
-                    top_candidates.push({neighbor_dist, neighbor});
-                }
-
-                // 如果结果集超过k个，移除最远的
-                if (top_candidates.size() > ef) {
-                    top_candidates.pop();
-                }
-            }
-        }
-    }
-
-    // 提取结果
-    std::vector<int> result;
-    while (!top_candidates.empty()) {
-        result.push_back(top_candidates.top().second);
-        top_candidates.pop();
-    }
-    std::reverse(result.begin(), result.end()); // 按距离从小到大排序
-    return result;
-}
-
-void HNSW::connect(int a, int b, int layer) {
-    auto &neighbors = nodes[a].neighbors[layer];
-    if (std::find(neighbors.begin(), neighbors.end(), b) == neighbors.end()) {
-        neighbors.push_back(b);
-        if (neighbors.size() > M) {
-            std::priority_queue<std::pair<float, int>> neighbor_distances;
-            for (int neighbor : neighbors) {
-                float dist = euclidean_distance(nodes[a].vec, nodes[neighbor].vec);
-                neighbor_distances.push({dist, neighbor});
-            }
-
-            neighbors.clear();
-            while (neighbors.size() < M && !neighbor_distances.empty()) {
-                neighbors.push_back(neighbor_distances.top().second);
-                neighbor_distances.pop();
-            }
-        }
-    }
-}
-
-float HNSW::euclidean_distance(const std::vector<float> &a, const std::vector<float> &b) {
+// 计算欧氏距离（带平方根）
+float HNSW::euclidean_distance(const std::vector<float>& a, const std::vector<float>& b) {
     float sum = 0.0f;
-    for (size_t i = 0; i < a.size(); i++) {
+    for (size_t i = 0; i < a.size(); ++i) {
         float diff = a[i] - b[i];
         sum += diff * diff;
     }
-    return sqrt(sum);
+    return std::sqrt(sum);
+}
+
+// 在指定层搜索最近邻
+std::vector<int> HNSW::search_layer(const std::vector<float>& q, int ep, int ef, int layer) {
+    std::unordered_set<int> visited;
+    auto cmp = [&](int a_id, int b_id) {
+        return euclidean_distance(q, nodes[layer].at(a_id).vec) > 
+               euclidean_distance(q, nodes[layer].at(b_id).vec);
+    };
+    std::priority_queue<int, std::vector<int>, decltype(cmp)> candidates(cmp);
+    std::priority_queue<std::pair<float, int>> result; // 最大堆保存最近邻
+
+    candidates.push(ep);
+    visited.insert(ep);
+
+    while (!candidates.empty()) {
+        int curr = candidates.top();
+        candidates.pop();
+
+        // 更新结果集
+        float curr_dist = euclidean_distance(q, nodes[layer].at(curr).vec);
+        if (result.size() < ef) {
+            result.emplace(curr_dist, curr);
+        } else if (curr_dist < result.top().first) {
+            result.pop();
+            result.emplace(curr_dist, curr);
+        }
+
+        // 扩展候选集
+        for (int neighbor : nodes[layer].at(curr).neighbors) {
+            if (!visited.count(neighbor)) {
+                visited.insert(neighbor);
+                candidates.push(neighbor);
+            }
+        }
+    }
+
+    // 按距离从小到大排序结果
+    std::vector<int> output;
+    while (!result.empty()) {
+        output.insert(output.begin(), result.top().second); // 反向插入
+        result.pop();
+    }
+    return output;
+}
+
+// 连接两个节点，并修剪邻居到最多M个
+void HNSW::connect(int a, int b, int layer) {
+    auto& node_a = nodes[layer][a];
+    auto& node_b = nodes[layer][b];
+
+    // 将b加入a的邻居并排序修剪
+    node_a.neighbors.push_back(b);
+    std::sort(node_a.neighbors.begin(), node_a.neighbors.end(), [&](int x, int y) {
+        return euclidean_distance(node_a.vec, nodes[layer].at(x).vec) <
+               euclidean_distance(node_a.vec, nodes[layer].at(y).vec);
+    });
+    if (node_a.neighbors.size() > M) {
+        node_a.neighbors.resize(M);
+    }
+
+    // 将a加入b的邻居并排序修剪（双向连接）
+    node_b.neighbors.push_back(a);
+    std::sort(node_b.neighbors.begin(), node_b.neighbors.end(), [&](int x, int y) {
+        return euclidean_distance(node_b.vec, nodes[layer].at(x).vec) <
+               euclidean_distance(node_b.vec, nodes[layer].at(y).vec);
+    });
+    if (node_b.neighbors.size() > M) {
+        node_b.neighbors.resize(M);
+    }
+}
+
+// 插入新节点到HNSW
+void HNSW::insert(int id, const std::vector<float>& vec) {
+    int l = random_level(); // 新节点的最高层
+    Node new_node{id, vec, {}};
+
+    // 查找顶层入口点
+    std::vector<int> eps;
+    int top_layer = max_layers - 1;
+    while (top_layer >= 0 && nodes[top_layer].empty()) {
+        top_layer--;
+    }
+    if (top_layer >= 0) {
+        eps.push_back(nodes[top_layer].begin()->first); // 取第一个节点作为入口
+    }
+
+    // 从顶层到l+1层搜索入口点
+    for (int layer = top_layer; layer > l; --layer) {
+        eps = search_layer(vec, eps[0], 1, layer); // 单入口点简化处理
+    }
+
+    // 逐层插入到l层
+    for (int layer = std::min(l, top_layer); layer >= 0; --layer) {
+        // 搜索当前层的ef_construction个候选
+        std::vector<int> candidates = search_layer(vec, eps[0], ef_construction, layer);
+      
+        // 连接新节点到候选邻居
+        for (int candidate : candidates) {
+            connect(new_node.id, candidate, layer);
+        }
+
+        // 添加新节点到当前层
+        nodes[layer][new_node.id] = new_node;
+
+        // 更新入口点为当前层结果（用于下一层）
+        eps = candidates;
+    }
+}
+
+// 查询最近的k个邻居
+std::vector<int> HNSW::query(const std::vector<float>& q, int k) {
+    // 查找顶层入口点
+    int top_layer = max_layers - 1;
+    while (top_layer >= 0 && nodes[top_layer].empty()) {
+        top_layer--;
+    }
+    if (top_layer < 0) return {};
+
+    std::vector<int> eps = {nodes[top_layer].begin()->first};
+
+    // 从顶层到0层搜索
+    for (int layer = top_layer; layer >= 0; --layer) {
+        eps = search_layer(q, eps[0], ef_construction, layer);
+    }
+
+    // 返回前k个结果
+    if (eps.size() > k) {
+        eps.resize(k);
+    }
+    return eps;
 }

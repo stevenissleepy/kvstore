@@ -14,15 +14,14 @@ private:
     struct Node {
         int id;
         std::vector<float> vec;
-        std::unordered_map<int, std::vector<int>> neighbors; // 各层的邻居
+        std::vector<int> neighbors;
     };
 
-    int max_layers;                      // 最大层数
-    int M;                               // 每个节点最大连接数
-    int ef_construction;                 // 动态候选集大小
-    std::unordered_map<int, Node> nodes; // 所有节点
-    int enter_point;                     // 入口点
-    std::mt19937 rng;                    // 随机数生成器
+    int max_layers;                                   // 最大层数
+    int M;                                            // 每个节点最大连接数
+    int ef_construction;                              // 动态候选集大小
+    std::vector<std::unordered_map<int, Node>> nodes; // 各层的节点
+    std::mt19937 rng;                                 // 随机数生成器
 
 public:
     HNSW(int ml = 5, int m = 16, int ef = 200);
