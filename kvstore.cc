@@ -77,6 +77,7 @@ KVStore::~KVStore() {
 void KVStore::put(uint64_t key, const std::string &val) {
     // put key-vector
     kvecTable[key] = embedding_single(val);
+    hnsw.insert(key, kvecTable[key]);
 
     // put key-value
     uint32_t nxtsize = s->getBytes();
@@ -437,5 +438,20 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
         res.push_back(std::make_pair(ksimTable[i].first, get(ksimTable[i].first)));
     }
 
+    return res;
+}
+
+std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn_hnsw(std::string query, int k) {
+    std::vector<float> vec = embedding_single(query);
+
+    std::vector<int> knn = hnsw.query(vec, k);
+    std::vector<std::pair<std::uint64_t, std::string>> res;
+    for (int i = 0; i < knn.size(); ++i) {
+        uint64_t key = knn[i];
+        std::string val = get(key);
+        if (val != DEL) {
+            res.push_back(std::make_pair(key, val));
+        }
+    }
     return res;
 }

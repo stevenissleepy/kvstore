@@ -4,6 +4,7 @@
 #include "skiplist.h"
 #include "sstable.h"
 #include "sstablehead.h"
+#include "hnsw.h"
 
 #include <map>
 #include <set>
@@ -20,6 +21,7 @@ private:
 
     // key-vector
     std::map<uint64_t, std::vector<float>> kvecTable;
+    HNSW hnsw;
 
 public:
     KVStore(const std::string &dir);
@@ -44,4 +46,5 @@ public:
     std::string fetchString(std::string file, int startOffset, uint32_t len);
     
     std::vector<std::pair<std::uint64_t, std::string>> search_knn(std::string query, int k);
+    std::vector<std::pair<std::uint64_t, std::string>> search_knn_hnsw(std::string query, int k);
 };

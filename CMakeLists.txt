@@ -13,6 +13,7 @@ set(COMMON_SOURCES
     sstable.cpp
     bloom.cpp
     sstablehead.cpp
+    hnsw.cpp
 )
 
 # 定义一个函数，用于创建可执行目标
