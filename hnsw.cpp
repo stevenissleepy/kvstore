@@ -20,7 +20,7 @@ void HNSW::insert(int id, const std::vector<float> &vec) {
     int ep    = enter_point;
     for (int l = max_layers - 1; l >= 0; l--) {
         // 搜索当前层的最近邻
-        std::vector<int> W = search_layer(vec, ep, 1, l);
+        std::vector<int> W = search_layer(vec, ep, M, l);
         ep                 = W[0];
 
         // 连接新节点
@@ -43,7 +43,7 @@ std::vector<int> HNSW::query(const std::vector<float> &q, int k) {
     }
 
     // 在底层搜索
-    std::vector<int> result = search_layer(q, ep, ef_construction, 0);
+    std::vector<int> result = search_layer(q, ep, k, 0);
     return result;
 }
 
@@ -68,11 +68,6 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int ep, int ef,
     while (!candidates.empty()) {
         auto [cur_dist, cur_node] = candidates.top();
         candidates.pop();
-
-        // 如果当前节点的距离大于结果集中最远的距离，停止扩展
-        if (top_candidates.size() >= ef && cur_dist > top_candidates.top().first) {
-            break;
-        }
 
         // 遍历当前节点的邻居
         for (int neighbor : nodes[cur_node].neighbors[layer]) {
