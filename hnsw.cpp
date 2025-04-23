@@ -40,7 +40,7 @@ float HNSW::euclidean_distance(const std::vector<float> &a, const std::vector<fl
  * @return 返回最近邻的节点ID
  */
 std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, int layer) {
-    std::unordered_map<int, Node> nodes = layers[layer];
+    std::unordered_map<int, Node> &nodes = layers[layer];
     std::unordered_set<int> visited;
     auto cmp = [&](int a_id, int b_id) {
         return euclidean_distance(q, nodes[a_id].vec) > euclidean_distance(q, nodes[b_id].vec);
@@ -55,8 +55,16 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
     // 广搜+贪心
     while (!candidates.empty()) {
         int curr_id   = candidates.top();
-        int curr_dist = euclidean_distance(q, nodes[curr_id].vec);
+        float curr_dist = euclidean_distance(q, nodes[curr_id].vec);
         candidates.pop();
+
+        // 检查当前节点是否够近
+        if (result.size() < k) {
+            result.push({curr_dist, curr_id});
+        } else if (curr_dist < result.top().first) {
+            result.pop();
+            result.push({curr_dist, curr_id});
+        }
 
         // 遍历当前节点的邻居
         for (int neighbor : nodes[curr_id].neighbors) {
