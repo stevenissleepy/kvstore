@@ -71,7 +71,7 @@ std::vector<int> HNSW::search_layer(const std::vector<float> &q, int k, int ep, 
 
             visited.insert(neighbor);
             float dist = euclidean_distance(q, nodes[neighbor].vec);
-            if (dist < curr_dist) {
+            if (dist < curr_dist || result.size() < k) {
                 candidates.push(neighbor);
             }
         }
