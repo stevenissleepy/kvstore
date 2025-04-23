@@ -15,21 +15,9 @@ set(COMMON_SOURCES
     sstablehead.cpp
 )
 
-set(COMMON_HEADERS
-    kvstore_api.h
-    kvstore.h
-    skiplist.h
-    sstable.h
-    bloom.h
-    MurmurHash3.h
-    utils.h
-    test.h
-    sstablehead.h
-)
-
 # 定义一个函数，用于创建可执行目标
 function(add_lsm_executable target_name source_file)
-    add_executable(${target_name} ${source_file} ${COMMON_SOURCES} ${COMMON_HEADERS})
+    add_executable(${target_name} ${source_file} ${COMMON_SOURCES})
     target_link_libraries(${target_name} PUBLIC embedding)
 endfunction()
 
