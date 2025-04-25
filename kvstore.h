@@ -5,6 +5,7 @@
 #include "sstable.h"
 #include "sstablehead.h"
 #include "hnsw.h"
+#include "hnswg.h"
 
 #include <map>
 #include <set>
@@ -21,7 +22,7 @@ private:
 
     // key-vector
     std::map<uint64_t, std::vector<float>> kvecTable;
-    HNSW hnsw;
+    HNSWGraph hnsw;
 
 public:
     KVStore(const std::string &dir);

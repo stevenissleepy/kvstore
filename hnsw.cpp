@@ -108,10 +108,7 @@ vector<int> HNSW::search_layer(const vector<float> &q, int k, int ep, int layer)
                 continue;
 
             visited.insert(neighbor);
-            float sim = similarity_cos(q, nodes[neighbor].vec);
-            if (sim > curr_sim || result.size() < k) {
-                candidates.push(neighbor);
-            }
+            candidates.push(neighbor);
         }
 
         // 将 candidates 中的节点限制在 ef_construction 个

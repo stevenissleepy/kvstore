@@ -21,7 +21,7 @@ private:
     std::mt19937 rng;                                  // 随机数生成器
 
 public:
-    HNSW(int ml = 6, int m = 6, int ef = 30);
+    HNSW(int ml = 6, int m = 12, int ef = 60);
 
     void insert(int id, const std::vector<float> &vec);
     std::vector<int> query(const std::vector<float> &q, int k);
@@ -34,6 +34,7 @@ private:
 
     void connect(int a, int b, int layer);
 
+    float distance(const std::vector<float> &a, const std::vector<float> &b);
     float euclidean_distance(const std::vector<float> &a, const std::vector<float> &b);
     float similarity_cos(const std::vector<float> &a, const std::vector<float> &b);
 };

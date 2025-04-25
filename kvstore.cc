@@ -444,10 +444,14 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
 std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn_hnsw(std::string query, int k) {
     std::vector<float> vec = embedding_single(query);
 
-    std::vector<int> knn = hnsw.query(vec, k);
+    std::vector<std::pair<uint64_t, float>> knn = hnsw.query(vec, k);
+    std::vector<uint64_t> knn_ids;
+    for (const auto &pair : knn) {
+        knn_ids.push_back(pair.first);
+    }
     std::vector<std::pair<std::uint64_t, std::string>> res;
     for (int i = 0; i < knn.size(); ++i) {
-        uint64_t key = knn[i];
+        uint64_t key = knn_ids[i];
         std::string val = get(key);
         if (val != DEL) {
             res.push_back(std::make_pair(key, val));
