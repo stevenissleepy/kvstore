@@ -1,40 +1,33 @@
 #pragma once
 
-#include <random>
-#include <unordered_map>
-#include <unordered_set>
+#include <cmath>
+#include <cstdint>
 #include <vector>
 
 class HNSW {
 private:
     struct Node {
-        int key;
+        uint64_t key;
         std::vector<float> vec;
-        std::vector<int> neighbors;
+        std::vector<std::vector<int>> neighbors;
+        int max_level;
     };
 
-    int max_layers;                                    // 最大层数
-    int M;                                             // 新插入节点最大连接数
-    int M_max;                                         // 每个节点的最大连接数
-    int ef_construction;                               // 动态候选集大小
-    int q;                                             // 增长率
-    std::vector<std::unordered_map<int, Node>> layers; // 各层的节点
-    std::mt19937 rng;                                  // 随机数生成器
-
-public:
-    HNSW(int max_layers = 6, int M = 6, int M_max = 8, int ef_construction = 30, int q = 0.5);
-
-    void insert(int id, const std::vector<float> &vec);
-    std::vector<int> query(const std::vector<float> &q, int k);
-
 private:
-    int random_level();
-
-    std::vector<int> search_layer(const std::vector<float> &q, int k, int ep, int layer);
-
-    void connect(int a, int b, int layer);
+    std::vector<Node> nodes;
+    int entry_point = -1;
+    int max_level   = 0;
+    const int M;
+    const int Mmax;
+    const int ef_construction;
+    const float mL;
 
     float distance(const std::vector<float> &a, const std::vector<float> &b);
-    float euclidean_distance(const std::vector<float> &a, const std::vector<float> &b);
-    float similarity_cos(const std::vector<float> &a, const std::vector<float> &b);
+    int search_layer_greedy(const std::vector<float> &q, int layer, int entry_point_id);
+    std::vector<std::pair<float, int>> search_layer(const std::vector<float> &q, int layer, int entry_point_id = -1);
+
+public:
+    HNSW(int m = 4, int mmax = 6, int ef = 40, float mlParam = 1.0f / log(6.0f));
+    void insert(uint64_t key, const std::vector<float> &vec);
+    std::vector<std::pair<uint64_t, float>> query(const std::vector<float> &q, int k);
 };
