@@ -3,23 +3,52 @@
 #include <algorithm>
 #include <cmath>
 #include <queue>
-#include <set>
+#include <unordered_set>
 
-HNSW::HNSW(int m, int mmax, int ef, float mlParam) : M(m), Mmax(mmax), ef_construction(ef), mL(mlParam) {}
+HNSW::HNSW(int m, int M_max, int ef, int m_L) :
+    M(m),
+    M_max(M_max),
+    ef_construction(ef),
+    m_L(m_L),
+    top_layer(0),
+    entry_point(-1) {}
 
-float HNSW::distance(const std::vector<float> &a, const std::vector<float> &b) {
-    if (a.size() != b.size())
-        return 2.0f;
-    float dot = 0, norm_a = 0, norm_b = 0;
-    for (size_t i = 0; i < a.size(); ++i) {
-        dot += a[i] * b[i];
-        norm_a += a[i] * a[i];
-        norm_b += b[i] * b[i];
+inline int HNSW::random_layer() {
+    return -log((rand() / (float)RAND_MAX)) * m_L;
+}
+
+inline void HNSW::connect(int id, int neighbor_id, int layer) {
+    nodes[id].neighbors[layer].push_back(neighbor_id);
+    nodes[neighbor_id].neighbors[layer].push_back(id);
+}
+
+/* 余弦相似度越大，距离越短 */
+inline float HNSW::distance(const std::vector<float> &a, const std::vector<float> &b) {
+    return - similarity_cos(a, b);
+}
+
+float HNSW::similarity_cos(const std::vector<float> &a, const std::vector<float> &b) {
+    int n = a.size();
+
+    double sum  = 0.0;
+    double sum1 = 0.0;
+    double sum2 = 0.0;
+
+    for (int i = 0; i < n; i++) {
+        sum += a[i] * b[i];
+        sum1 += a[i] * a[i];
+        sum2 += b[i] * b[i];
     }
-    if (norm_a <= 0 || norm_b <= 0)
-        return 2.0f;
-    float similarity = dot / (sqrt(norm_a) * sqrt(norm_b));
-    return 1 - similarity;
+
+    // Handle the case where one or both vectors are zero vectors
+    if (sum1 == 0.0 || sum2 == 0.0) {
+        if (sum1 == 0.0 && sum2 == 0.0) {
+            return 1.0f; // two zero vectors are similar
+        }
+        return 0.0f;
+    }
+
+    return sum / (sqrt(sum1) * sqrt(sum2));
 }
 
 int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
@@ -49,104 +78,106 @@ int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
 }
 
 std::vector<std::pair<float, int>> HNSW::search_layer(const std::vector<float> &q, int layer, int ep) {
-    std::vector<std::pair<float, int>> results;
-    std::priority_queue<std::pair<float, int>> candidates;
+    using Candidate = std::pair<float, int>;
+    auto cmp        = [](const Candidate &a, const Candidate &b) { return a.first > b.first; };
+    std::priority_queue<Candidate, std::vector<Candidate>, decltype(cmp)> candidates(cmp);
     std::priority_queue<std::pair<float, int>> topResults;
-    std::set<int> visited;
-    ep = ep == -1 ? ep: entry_point;
+    std::unordered_set<int> visited;
+    ep = ep == -1 ? ep : entry_point;
 
     float d = distance(q, nodes[ep].vec);
-    candidates.emplace(-d, ep);
+    candidates.emplace(d, ep);
     topResults.emplace(d, ep);
     visited.insert(ep);
 
     while (!candidates.empty()) {
-        auto current       = candidates.top();
-        float dist_current = -current.first;
+        auto [current_dist, current_id] = candidates.top();
         candidates.pop();
 
-        if (topResults.size() >= ef_construction && dist_current > topResults.top().first)
+        /* 剪枝 */
+        if (topResults.size() >= ef_construction && current_dist > topResults.top().first)
             continue;
 
-        int current_id = current.second;
-        for (int neighbor : nodes[current_id].neighbors[layer]) {
-            if (visited.count(neighbor))
-                continue;
-            visited.insert(neighbor);
-            float d_neighbor = distance(q, nodes[neighbor].vec);
+        /* 遍历当前节点的邻居 */
+        for (int neighbor_id : nodes[current_id].neighbors[layer]) {
 
-            if (topResults.size() < ef_construction || d_neighbor < topResults.top().first) {
-                candidates.emplace(-d_neighbor, neighbor);
-                topResults.emplace(d_neighbor, neighbor);
+            if (visited.find(neighbor_id) != visited.end())
+                continue;
+            visited.insert(neighbor_id);
+
+            float neighbot_dist = distance(q, nodes[neighbor_id].vec);
+            if (topResults.size() < ef_construction || neighbot_dist < topResults.top().first) {
+                candidates.emplace(neighbot_dist, neighbor_id);
+                topResults.emplace(neighbot_dist, neighbor_id);
                 if (topResults.size() > ef_construction)
                     topResults.pop();
             }
         }
     }
 
+    /* 将结果从小到大排序 */
+    std::vector<std::pair<float, int>> result;
     while (!topResults.empty()) {
-        results.emplace_back(topResults.top().first, topResults.top().second);
+        result.push_back(topResults.top());
         topResults.pop();
     }
-    std::sort(results.begin(), results.end());
-    return results;
+    std::reverse(result.begin(), result.end());
+    return result;
 }
 
 void HNSW::insert(uint64_t key, const std::vector<float> &vec) {
-    Node newNode;
-    newNode.key       = key;
-    newNode.vec       = vec;
-    newNode.max_level = static_cast<int>(-log((rand() / (float)RAND_MAX)) * mL);
-    newNode.neighbors.resize(newNode.max_level + 1);
+    Node newNode(key, vec, random_layer());
+    int newNodeId = nodes.size();
+    nodes.push_back(newNode);
 
-    if (nodes.empty()) {
+    /* 如果是第一个节点 */
+    if (nodes.size() == 1) {
         nodes.push_back(newNode);
         entry_point = 0;
-        max_level   = newNode.max_level;
+        top_layer   = newNode.max_layer;
         return;
     }
 
-    int curr_ep = entry_point;
-    for (int level = max_level; level > newNode.max_level; --level) {
-        curr_ep = search_layer_greedy(vec, level, curr_ep);
+    /* 贪心地搜索到 max_layer */
+    int ep = entry_point;
+    for (int layer = top_layer; layer > newNode.max_layer; --layer) {
+        ep = search_layer_greedy(vec, layer, ep);
     }
 
-    int new_node_id = nodes.size();
-    nodes.push_back(newNode);
+    /* 搜索 0~max_layer 的邻居 */
+    for (int layer = std::min(newNode.max_layer, top_layer); layer >= 0; --layer) {
+        auto candidates = search_layer(vec, layer, ep);
 
-    for (int level = std::min(newNode.max_level, max_level); level >= 0; --level) {
-        auto candidates = search_layer(vec, level, curr_ep);
-        std::vector<int> selected;
-        for (const auto &pair : candidates) {
-            if (selected.size() < M)
-                selected.push_back(pair.second);
-        }
-
-        for (int neighbor : selected) {
-            nodes[new_node_id].neighbors[level].push_back(neighbor);
-            nodes[neighbor].neighbors[level].push_back(new_node_id);
+        /* 选出前M个最近邻并连接 */
+        size_t M = std::min(static_cast<size_t>(M), candidates.size());
+        for (size_t i = 0; i < M; ++i) {
+            int neighbor_id = candidates[i].second;
+            connect(newNodeId, neighbor_id, layer);
         }
     }
 
-    if (newNode.max_level > max_level) {
-        entry_point = new_node_id;
-        max_level   = newNode.max_level;
+    /* 更新 top_layer 和 ep */
+    if (newNode.max_layer > top_layer) {
+        entry_point = newNodeId;
+        top_layer   = newNode.max_layer;
     }
 }
 
 std::vector<std::pair<uint64_t, float>> HNSW::query(const std::vector<float> &q, int k) {
-    std::vector<std::pair<uint64_t, float>> results;
-    if (nodes.empty())
-        return results;
-
-    int curr_ep = entry_point;
-    for (int level = max_level; level > 0; --level) {
-        curr_ep = search_layer_greedy(q, level, curr_ep);
+    /* 通过贪心的方式搜到第1层 */
+    int ep = entry_point;
+    for (int layer = top_layer; layer > 0; --layer) {
+        ep = search_layer_greedy(q, layer, ep);
     }
 
-    auto candidates = search_layer(q, 0, curr_ep);
-    for (size_t i = 0; i < std::min(static_cast<size_t>(k), candidates.size()); ++i) {
-        results.emplace_back(nodes[candidates[i].second].key, 1 - candidates[i].first);
+    /* 在第0层进行精确搜索 */
+    auto candidates = search_layer(q, 0, ep);
+    
+    /* 选出前k个最近邻 */
+    std::vector<std::pair<uint64_t, float>> results;
+    size_t size = std::min(static_cast<size_t>(k), candidates.size());
+    for (size_t i = 0; i < size; ++i) {
+        results.emplace_back(nodes[candidates[i].second].key, -candidates[i].first);
     }
     return results;
 }
