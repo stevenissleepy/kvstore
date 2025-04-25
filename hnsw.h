@@ -8,14 +8,14 @@
 class HNSW {
 private:
     struct Node {
-        int id;
+        int key;
         std::vector<float> vec;
         std::vector<int> neighbors;
     };
 
     int max_layers;                                    // 最大层数
-    int top_layer;                                     // 当前顶层
-    int M;                                             // 每个节点最大连接数
+    int M;                                             // 新插入节点最大连接数
+    int M_max;                                         // 每个节点的最大连接数
     int ef_construction;                               // 动态候选集大小
     std::vector<std::unordered_map<int, Node>> layers; // 各层的节点
     std::mt19937 rng;                                  // 随机数生成器
