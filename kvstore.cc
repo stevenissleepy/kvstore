@@ -413,11 +413,10 @@ std::string KVStore::fetchString(std::string file, int startOffset, uint32_t len
 }
 
 std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::string query, int k) {
-    std::vector<std::pair<std::uint64_t, std::string>> res;
     std::vector<float> vec = embedding_single(query);
-    size_t n_embd          = vec.size();
 
-    // 获取每个 kv 与目标的余弦相似度
+    /* 获取每个 kv 与目标的余弦相似度 */
+    size_t n_embd = vec.size();
     std::vector<std::pair<uint64_t, float>> ksimTable;
     for (auto it : kvecTable) {
         uint64_t key            = it.first;
@@ -426,7 +425,7 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
         ksimTable.emplace_back(key, sim);
     }
 
-    // 根据余弦相似度排序
+    /* 根据余弦相似度排序 */
     std::partial_sort(
         ksimTable.begin(),
         ksimTable.begin() + k,
@@ -434,9 +433,10 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
         [](const std::pair<uint64_t, float> &a, const std::pair<uint64_t, float> &b) { return a.second > b.second; }
     );
 
-    // 获取前 k 个
+    /* 取前k个 */
+    std::vector<std::pair<std::uint64_t, std::string>> res;
     for (int i = 0; i < k; ++i) {
-        res.push_back(std::make_pair(ksimTable[i].first, get(ksimTable[i].first)));
+        res.emplace_back(ksimTable[i].first, get(ksimTable[i].first));
     }
 
     return res;
@@ -450,9 +450,7 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn_hnsw(std:
     /* 通过 key 找到对应的 key-value */
     std::vector<std::pair<std::uint64_t, std::string>> res;
     for (uint64_t key : knn) {
-        std::string val = get(key);
-        if (val != DEL)
-            res.push_back(std::make_pair(key, val));
+        res.emplace_back(key, get(key));
     }
     return res;
 }
