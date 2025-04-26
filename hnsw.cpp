@@ -18,8 +18,29 @@ inline int HNSW::random_layer() {
 }
 
 inline void HNSW::connect(int id, int neighbor_id, int layer) {
-    nodes[id].neighbors[layer].push_back(neighbor_id);
-    nodes[neighbor_id].neighbors[layer].push_back(id);
+    auto &current_node = nodes[id];
+    auto &neighbor_node = nodes[neighbor_id];
+
+    /* 连接两个 node */
+    current_node.neighbors[layer].push_back(neighbor_id);
+    neighbor_node.neighbors[layer].push_back(id);
+
+    /* 如果邻居节点的 neighbor 数量大于 M_max */
+    if (neighbor_node.neighbors[layer].size() > M_max) {
+        /* 找到最远的邻居 */
+        auto &neighbors = neighbor_node.neighbors[layer];
+        auto max_it     = std::max_element(neighbors.begin(), neighbors.end(),
+            [&](int a, int b) { return distance(nodes[neighbor_id].vec, nodes[a].vec) < distance(nodes[neighbor_id].vec, nodes[b].vec); });
+        int max_neighbor_id = *max_it;
+
+        /* 删除最远的邻居 */
+        neighbors.erase(max_it);
+        auto &max_neighbor = nodes[max_neighbor_id];
+        auto it           = std::find(max_neighbor.neighbors[layer].begin(), max_neighbor.neighbors[layer].end(), neighbor_id);
+        if (it != max_neighbor.neighbors[layer].end()) {
+            max_neighbor.neighbors[layer].erase(it);
+        }
+    }
 }
 
 /* 余弦相似度越大，距离越短 */

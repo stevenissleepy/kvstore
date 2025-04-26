@@ -18,7 +18,7 @@ private:
     };
 
 public:
-    HNSW(int M = 6, int M_max = 8, int ef = 30, int m_l = 6);
+    HNSW(int M = 24, int M_max = 38, int ef = 30, int m_l = 6);
     void insert(uint64_t key, const std::vector<float> &vec);
     std::vector<uint64_t> query(const std::vector<float> &q, int k);
 
