@@ -20,7 +20,7 @@ private:
 public:
     HNSW(int M = 6, int M_max = 8, int ef = 30, int m_l = 6);
     void insert(uint64_t key, const std::vector<float> &vec);
-    std::vector<std::pair<uint64_t, float>> query(const std::vector<float> &q, int k);
+    std::vector<uint64_t> query(const std::vector<float> &q, int k);
 
 private:
     int search_layer_greedy(const std::vector<float> &q, int layer, int ep);

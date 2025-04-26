@@ -163,7 +163,7 @@ void HNSW::insert(uint64_t key, const std::vector<float> &vec) {
     }
 }
 
-std::vector<std::pair<uint64_t, float>> HNSW::query(const std::vector<float> &q, int k) {
+std::vector<uint64_t> HNSW::query(const std::vector<float> &q, int k) {
     /* 通过贪心的方式搜到第1层 */
     int ep = entry_point;
     for (int layer = top_layer; layer > 0; --layer) {
@@ -174,10 +174,11 @@ std::vector<std::pair<uint64_t, float>> HNSW::query(const std::vector<float> &q,
     auto candidates = search_layer(q, 0, ep);
     
     /* 选出前k个最近邻 */
-    std::vector<std::pair<uint64_t, float>> results;
+    std::vector<uint64_t> results;
     size_t size = std::min(static_cast<size_t>(k), candidates.size());
     for (size_t i = 0; i < size; ++i) {
-        results.emplace_back(nodes[candidates[i].second].key, -candidates[i].first);
+        results.push_back(nodes[candidates[i].second].key);
     }
+    
     return results;
 }
