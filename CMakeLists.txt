@@ -30,9 +30,6 @@ add_lsm_executable(e2e_test "test/E2E_test.cpp")
 add_lsm_executable(sim_test "test/sim_test.cpp")
 
 # 添加子目录
-add_subdirectory(skiplist)
-add_subdirectory(bloom)
-add_subdirectory(hnsw)
 add_subdirectory(third_party/llama.cpp)
-add_subdirectory(embedding)
+add_subdirectory(lib)
 add_subdirectory(test)
