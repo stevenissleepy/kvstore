@@ -11,7 +11,6 @@ set(COMMON_SOURCES
     kvstore.cc
     sstable.cpp
     sstablehead.cpp
-    hnsw.cpp
 )
 
 # 定义一个函数，用于创建可执行目标
@@ -20,6 +19,7 @@ function(add_lsm_executable target_name source_file)
     target_link_libraries(${target_name} PUBLIC embedding)
     target_link_libraries(${target_name} PUBLIC skiplist)
     target_link_libraries(${target_name} PUBLIC bloom)
+    target_link_libraries(${target_name} PUBLIC hnsw)
 endfunction()
 
 # 添加可执行目标
@@ -32,6 +32,7 @@ add_lsm_executable(sim_test "test/sim_test.cpp")
 # 添加子目录
 add_subdirectory(skiplist)
 add_subdirectory(bloom)
+add_subdirectory(hnsw)
 add_subdirectory(third_party/llama.cpp)
 add_subdirectory(embedding)
 add_subdirectory(test)
