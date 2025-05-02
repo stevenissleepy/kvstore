@@ -1,6 +1,6 @@
 #ifndef LSM_KV_BLOOM_H
 #define LSM_KV_BLOOM_H
-#include "MurmurHash3.h"
+#include "./utils/MurmurHash3.h"
 
 #include <bitset>
 #include <cstdint>
