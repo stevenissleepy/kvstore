@@ -10,7 +10,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(COMMON_SOURCES
     kvstore.cc
     sstable.cpp
-    bloom.cpp
     sstablehead.cpp
     hnsw.cpp
 )
@@ -20,6 +19,7 @@ function(add_lsm_executable target_name source_file)
     add_executable(${target_name} ${source_file} ${COMMON_SOURCES})
     target_link_libraries(${target_name} PUBLIC embedding)
     target_link_libraries(${target_name} PUBLIC skiplist)
+    target_link_libraries(${target_name} PUBLIC bloom)
 endfunction()
 
 # 添加可执行目标
@@ -31,6 +31,7 @@ add_lsm_executable(sim_test "test/sim_test.cpp")
 
 # 添加子目录
 add_subdirectory(skiplist)
+add_subdirectory(bloom)
 add_subdirectory(third_party/llama.cpp)
 add_subdirectory(embedding)
 add_subdirectory(test)
