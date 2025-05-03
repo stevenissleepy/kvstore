@@ -60,7 +60,7 @@ void KvecTable::del(uint64_t key) {
 }
 
 void KvecTable::putFile(const std::string &data_root) {
-    if (dim == 0)
+    if (dim == 0 || table.empty())
         return;
 
     /* create directory */
