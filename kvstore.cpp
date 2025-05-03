@@ -39,6 +39,10 @@ bool KVStore::sstable_num_out_of_limit(int level) {
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
 {
+    /* read k-vec */
+    kvecTable.loadFile(dir+"/kvec");
+
+    /* read k-value */
     for (totalLevel = 0;; ++totalLevel) {
         std::string path = dir + "/level-" + std::to_string(totalLevel) + "/";
         std::vector<std::string> files;
@@ -446,6 +450,7 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
     /* 取前k个 */
     std::vector<std::pair<std::uint64_t, std::string>> res;
     for (int i = 0; i < k; ++i) {
+        if(ksimTable.size() <= i) break;
         res.emplace_back(ksimTable[i].first, get(ksimTable[i].first));
     }
 

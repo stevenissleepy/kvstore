@@ -24,6 +24,7 @@ add_lsm_executable(performance performance.cc)
 add_lsm_executable(e2e_test "test/E2E_test.cpp")
 add_lsm_executable(sim_test "test/sim_test.cpp")
 add_lsm_executable(vp_test_1 "test/Vector_Persistent_Test_Phase1.cpp")
+add_lsm_executable(vp_test_2 "test/Vector_Persistent_Test_Phase2.cpp")
 
 # 添加子目录
 add_subdirectory(third_party/llama.cpp)
