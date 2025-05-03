@@ -36,11 +36,15 @@ bool KVStore::sstable_num_out_of_limit(int level) {
     return sstableIndex[level].size() > limit;
 }
 
+void KVStore::load_embedding_from_disk(const std::string &data_root) {
+    kvecTable.loadFile(data_root+"/kvec");
+}
+
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
 {
     /* read k-vec */
-    kvecTable.loadFile(dir+"/kvec");
+    load_embedding_from_disk(dir);
 
     /* read k-value */
     for (totalLevel = 0;; ++totalLevel) {

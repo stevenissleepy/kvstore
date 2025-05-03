@@ -13,6 +13,7 @@
 class KVStore : public KVStoreAPI {
 private:
     bool sstable_num_out_of_limit(int level);
+    void load_embedding_from_disk(const std::string &data_root);
 
 private:
     // key-value
