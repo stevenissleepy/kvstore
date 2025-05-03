@@ -76,8 +76,9 @@ KVStore::~KVStore() {
  */
 void KVStore::put(uint64_t key, const std::string &val) {
     // put key-vector
-    kvecTable[key] = embedding_single(val);
-    hnsw.insert(key, kvecTable[key]);
+    std::vector<float> vec = embedding_single(val);
+    kvecTable.put(key, vec);
+    hnsw.insert(key, vec);
 
     // put key-value
     uint32_t nxtsize = s->getBytes();
@@ -89,6 +90,10 @@ void KVStore::put(uint64_t key, const std::string &val) {
     if (nxtsize + 10240 + 32 <= MAXSIZE)
         s->insert(key, val); // 小于等于（不超过） 2MB
     else {
+        /* put k-vec */
+        kvecTable.putFile("./data/kvec");
+
+        /* put k-value */
         sstable ss(s);
         s->reset();
         std::string url  = ss.getFilename();
@@ -418,9 +423,10 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
     /* 获取每个 kv 与目标的余弦相似度 */
     size_t n_embd = vec.size();
     std::vector<std::pair<uint64_t, float>> ksimTable;
-    for (auto it : kvecTable) {
-        uint64_t key            = it.first;
-        std::vector<float> vec2 = it.second;
+    std::unordered_set<uint64_t> keys = kvecTable.getKeys();
+    for (auto it : keys) {
+        uint64_t key            = it;
+        std::vector<float> vec2 = kvecTable.get(key);
         float sim               = common_embd_similarity_cos(vec.data(), vec2.data(), n_embd);
         ksimTable.emplace_back(key, sim);
     }

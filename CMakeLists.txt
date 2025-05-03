@@ -6,20 +6,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# 公共源文件和头文件
-set(COMMON_SOURCES
-    kvstore.cc
-    sstable.cpp
-    sstablehead.cpp
-)
+# 将 kvstore 编译成一个 lib
+add_library(kvstore STATIC kvstore.cpp sstable.cpp sstablehead.cpp)
+target_link_libraries(kvstore PUBLIC embedding skiplist bloom hnsw kvecTable)
 
 # 定义一个函数，用于创建可执行目标
 function(add_lsm_executable target_name source_file)
-    add_executable(${target_name} ${source_file} ${COMMON_SOURCES})
-    target_link_libraries(${target_name} PUBLIC embedding)
-    target_link_libraries(${target_name} PUBLIC skiplist)
-    target_link_libraries(${target_name} PUBLIC bloom)
-    target_link_libraries(${target_name} PUBLIC hnsw)
+    add_executable(${target_name} ${source_file} ${SOURCES})
+    target_link_libraries(${target_name} PUBLIC kvstore)
 endfunction()
 
 # 添加可执行目标

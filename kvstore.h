@@ -5,6 +5,7 @@
 #include "sstable.h"
 #include "sstablehead.h"
 #include "hnsw.h"
+#include "kvecTable.h"
 
 #include <map>
 #include <set>
@@ -20,7 +21,7 @@ private:
     int totalLevel = -1;                        // 层数
 
     // key-vector
-    std::map<uint64_t, std::vector<float>> kvecTable;
+    kvecTable kvecTable;                       // memtable
     HNSW hnsw;
 
 public:
