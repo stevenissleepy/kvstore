@@ -106,14 +106,19 @@ void KvecTable::loadFile(const std::string &data_root) {
     });
 
     for (const auto &file : files) {
-        auto vecs = read_file(data_root + "/" + file);
-        for (const auto &pair : vecs) {
+        const std::string file_name = data_root + "/" + file;
+        /* read file */
+        auto pairs = read_file(file_name);
+        for (const auto &pair : pairs) {
             if(is_del_vec(pair.second)) {
                 del(pair.first);
             } else {
                 put(pair.first, pair.second);
             }
         }
+
+        /* remove file */
+        utils::rmfile(file_name.c_str()); 
     }
 }
 
