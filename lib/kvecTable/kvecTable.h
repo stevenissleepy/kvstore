@@ -33,5 +33,5 @@ private:
     std::vector<std::pair<uint64_t, std::vector<float>>> table;
     std::unordered_set<uint64_t> keyTable;
 
-    int dim = 0;
+    uint64_t dim = 0;
 };

@@ -92,6 +92,12 @@ void KvecTable::putFile(const std::string &data_root) {
 }
 
 void KvecTable::loadFile(const std::string &data_root) {
+    /* if data_root don't exist*/
+    if (!utils::dirExists(data_root)) {
+        return;
+    }
+
+    /* load files */
     std::vector<std::string> files;
     utils::scanDir(data_root, files);
 
