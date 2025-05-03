@@ -1,6 +1,6 @@
 #include "kvecTable.h"
 
-#include "utils.h"
+#include "utils/utils.h"
 
 #include <algorithm>
 #include <fstream>
@@ -10,6 +10,10 @@ kvecTable::kvecTable() {}
 
 /* get 应该从后往前倒着搜索 */
 std::vector<float> kvecTable::get(uint64_t key, const std::string &data_root) const {
+    /* find in key table */
+    if (keyTable.find(key) == keyTable.end()) 
+        return del_vec();
+
     /* find in memory */
     for (auto it = table.rbegin(); it != table.rend(); ++it) {
         if (it->first == key) {
@@ -43,6 +47,7 @@ void kvecTable::put(uint64_t key, const std::vector<float> &vec) {
     if(dim == 0)
         dim = vec.size();
 
+    keyTable.insert(key);
     table.emplace_back(key, vec);
 }
 
@@ -50,6 +55,7 @@ void kvecTable::del(uint64_t key) {
     if (dim == 0)
         return;
 
+    keyTable.erase(key);
     table.emplace_back(key, del_vec());
 }
 
@@ -96,7 +102,11 @@ void kvecTable::loadFile(const std::string &data_root) {
     for (const auto &file : files) {
         auto vecs = read_file(data_root + "/" + file);
         for (const auto &pair : vecs) {
-            put(pair.first, pair.second);
+            if(is_del_vec(pair.second)) {
+                del(pair.first);
+            } else {
+                put(pair.first, pair.second);
+            }
         }
     }
 }
@@ -107,6 +117,10 @@ void kvecTable::reset(const std::string &data_root) {
     if(utils::dirExists(data_root)) {
         utils::rmdir(data_root.c_str());
     }
+}
+
+std::unordered_set<uint64_t> kvecTable::getKeys() const {
+    return keyTable;
 }
 
 std::vector<std::pair<uint64_t, std::vector<float>>> kvecTable::read_file(const std::string &file) const {

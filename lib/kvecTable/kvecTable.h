@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 class kvecTable {
 public:
@@ -15,10 +16,12 @@ public:
     void del(uint64_t key);
 
     void putFile(const std::string &data_root = "./data/kvec");
-    
+
     void loadFile(const std::string &data_root = "./data/kvec");
 
     void reset(const std::string &data_root = "./data/kvec");
+
+    std::unordered_set<uint64_t> getKeys() const;
 
 private:
     std::vector<std::pair<uint64_t, std::vector<float>>> read_file(const std::string &file) const;
@@ -28,6 +31,7 @@ private:
 
 private:
     std::vector<std::pair<uint64_t, std::vector<float>>> table;
+    std::unordered_set<uint64_t> keyTable;
 
     int dim = 0;
 };
