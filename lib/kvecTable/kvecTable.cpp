@@ -6,10 +6,10 @@
 #include <fstream>
 #include <limits>
 
-kvecTable::kvecTable() {}
+KvecTable::KvecTable() {}
 
 /* get 应该从后往前倒着搜索 */
-std::vector<float> kvecTable::get(uint64_t key, const std::string &data_root) const {
+std::vector<float> KvecTable::get(uint64_t key, const std::string &data_root) const {
     /* find in key table */
     if (keyTable.find(key) == keyTable.end()) 
         return del_vec();
@@ -42,7 +42,7 @@ std::vector<float> kvecTable::get(uint64_t key, const std::string &data_root) co
     return del_vec();
 }
 
-void kvecTable::put(uint64_t key, const std::vector<float> &vec) {
+void KvecTable::put(uint64_t key, const std::vector<float> &vec) {
     /* if is the first k-vec pair */
     if(dim == 0)
         dim = vec.size();
@@ -51,7 +51,7 @@ void kvecTable::put(uint64_t key, const std::vector<float> &vec) {
     table.emplace_back(key, vec);
 }
 
-void kvecTable::del(uint64_t key) {
+void KvecTable::del(uint64_t key) {
     if (dim == 0)
         return;
 
@@ -59,7 +59,7 @@ void kvecTable::del(uint64_t key) {
     table.emplace_back(key, del_vec());
 }
 
-void kvecTable::putFile(const std::string &data_root) {
+void KvecTable::putFile(const std::string &data_root) {
     if (dim == 0)
         return;
 
@@ -91,7 +91,7 @@ void kvecTable::putFile(const std::string &data_root) {
     outfile.close();
 }
 
-void kvecTable::loadFile(const std::string &data_root) {
+void KvecTable::loadFile(const std::string &data_root) {
     std::vector<std::string> files;
     utils::scanDir(data_root, files);
 
@@ -111,7 +111,7 @@ void kvecTable::loadFile(const std::string &data_root) {
     }
 }
 
-void kvecTable::reset(const std::string &data_root) {
+void KvecTable::reset(const std::string &data_root) {
     dim = 0;
     table.clear();
     if(utils::dirExists(data_root)) {
@@ -119,11 +119,11 @@ void kvecTable::reset(const std::string &data_root) {
     }
 }
 
-std::unordered_set<uint64_t> kvecTable::getKeys() const {
+std::unordered_set<uint64_t> KvecTable::getKeys() const {
     return keyTable;
 }
 
-std::vector<std::pair<uint64_t, std::vector<float>>> kvecTable::read_file(const std::string &file) const {
+std::vector<std::pair<uint64_t, std::vector<float>>> KvecTable::read_file(const std::string &file) const {
     std::vector<std::pair<uint64_t, std::vector<float>>> result;
 
     std::ifstream infile(file, std::ios::binary);
@@ -154,12 +154,12 @@ std::vector<std::pair<uint64_t, std::vector<float>>> kvecTable::read_file(const 
     return result;
 }
 
-std::vector<float> kvecTable::del_vec() const {
+std::vector<float> KvecTable::del_vec() const {
     std::vector<float> result(dim, std::numeric_limits<float>::max());
     return result;
 }
 
-bool kvecTable::is_del_vec(const std::vector<float> &vec) const {
+bool KvecTable::is_del_vec(const std::vector<float> &vec) const {
     for(const auto &v : vec) {
         if (v != std::numeric_limits<float>::max()) {
             return false;

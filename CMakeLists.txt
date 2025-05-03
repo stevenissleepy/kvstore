@@ -12,7 +12,7 @@ target_link_libraries(kvstore PUBLIC embedding skiplist bloom hnsw kvecTable)
 
 # 定义一个函数，用于创建可执行目标
 function(add_lsm_executable target_name source_file)
-    add_executable(${target_name} ${source_file} ${SOURCES})
+    add_executable(${target_name} ${source_file})
     target_link_libraries(${target_name} PUBLIC kvstore)
 endfunction()
 

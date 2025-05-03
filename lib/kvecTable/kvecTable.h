@@ -5,9 +5,9 @@
 #include <vector>
 #include <unordered_set>
 
-class kvecTable {
+class KvecTable {
 public:
-    kvecTable();
+    KvecTable();
 
     std::vector<float> get(uint64_t key, const std::string &data_root = "./data/kvec") const;
 

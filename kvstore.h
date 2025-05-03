@@ -21,7 +21,7 @@ private:
     int totalLevel = -1;                        // 层数
 
     // key-vector
-    kvecTable kvecTable;                       // memtable
+    KvecTable kvecTable;                       // memtable
     HNSW hnsw;
 
 public:
