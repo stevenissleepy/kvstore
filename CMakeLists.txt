@@ -14,6 +14,7 @@ target_link_libraries(kvstore PUBLIC embedding skiplist bloom hnsw kvecTable)
 function(add_lsm_executable target_name source_file)
     add_executable(${target_name} ${source_file})
     target_link_libraries(${target_name} PUBLIC kvstore)
+    target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 endfunction()
 
 # 添加可执行目标
@@ -22,6 +23,7 @@ add_lsm_executable(persistence persistence.cc)
 add_lsm_executable(performance performance.cc)
 add_lsm_executable(e2e_test "test/E2E_test.cpp")
 add_lsm_executable(sim_test "test/sim_test.cpp")
+add_lsm_executable(vp_test_1 "test/Vector_Persistent_Test_Phase1.cpp")
 
 # 添加子目录
 add_subdirectory(third_party/llama.cpp)

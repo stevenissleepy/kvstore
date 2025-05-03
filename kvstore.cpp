@@ -58,6 +58,10 @@ KVStore::KVStore(const std::string &dir) :
 }
 
 KVStore::~KVStore() {
+    /* put k-vec */
+    kvecTable.putFile("./data/kvec");
+
+    /* put k-value */
     sstable ss(s);
     if (!ss.getCnt())
         return; // empty sstable
