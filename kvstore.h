@@ -13,7 +13,6 @@
 class KVStore : public KVStoreAPI {
 private:
     bool sstable_num_out_of_limit(int level);
-    void load_embedding_from_disk(const std::string &data_root);
 
 private:
     // key-value
@@ -46,6 +45,8 @@ public:
     void addsstable(sstable ss, int level); // 将ss加入缓存
 
     std::string fetchString(std::string file, int startOffset, uint32_t len);
+
+    void load_embedding_from_disk(const std::string &data_root);
     
     std::vector<std::pair<std::uint64_t, std::string>> search_knn(std::string query, int k);
     std::vector<std::pair<std::uint64_t, std::string>> search_knn_hnsw(std::string query, int k);

@@ -43,9 +43,6 @@ void KVStore::load_embedding_from_disk(const std::string &data_root) {
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
 {
-    /* read k-vec */
-    load_embedding_from_disk(dir);
-
     /* read k-value */
     for (totalLevel = 0;; ++totalLevel) {
         std::string path = dir + "/level-" + std::to_string(totalLevel) + "/";
