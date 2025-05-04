@@ -1,10 +1,11 @@
 #include "hnsw.h"
 
+#include "utils/utils.h"
+
 #include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <queue>
-#include "utils/utils.h"
 
 HNSW::HNSW(int m, int M_max, int ef, int m_L) :
     M(m),
@@ -245,6 +246,16 @@ std::vector<uint64_t> HNSW::query(const std::vector<float> &q, int k) {
 }
 
 void HNSW::putFile(const std::string &root) {
+    /* if exit, delete */
+    if (utils::dirExists(root)) {
+        std::vector<std::string> files;
+        utils::scanDir(root, files);
+        for (auto &file : files) {
+            std::string filename = root + "/" + file;
+            utils::rmfile(filename.data()) != 0;
+        }
+    }
+
     if (!utils::dirExists(root)) {
         utils::mkdir(root.data());
     }
@@ -308,7 +319,7 @@ void HNSW::put_file_deleted_nodes(const std::string &root) {
  */
 void HNSW::put_file_nodes(const std::string &root) {
     std::string nodes_dir = root + "/nodes";
-    if(!utils::dirExists(nodes_dir)){
+    if (!utils::dirExists(nodes_dir)) {
         utils::mkdir(nodes_dir.data());
     }
 
@@ -348,11 +359,11 @@ void HNSW::put_file_nodes(const std::string &root) {
                 std::string filename = edges_dir + "/" + std::to_string(layer) + ".bin";
                 std::ofstream output(filename, std::ios::binary);
 
-                /** 
+                /**
                  * 写入邻接表
                  * uint32_t num_neighbors
                  * uint32_t neighbors[num_neighbors]
-                 */ 
+                 */
                 const auto &neighbors  = nodes[i].neighbors[layer];
                 uint32_t num_neighbors = neighbors.size();
                 output.write(reinterpret_cast<const char *>(&num_neighbors), sizeof(uint32_t));
