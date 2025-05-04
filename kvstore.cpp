@@ -44,6 +44,10 @@ void KVStore::save_hnsw_index_to_disk(const std::string &data_root) {
     hnsw.putFile(data_root);
 }
 
+void KVStore::load_hnsw_index_from_disk(const std::string &data_root) {
+    hnsw.loadFile(data_root);
+}
+
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
 {

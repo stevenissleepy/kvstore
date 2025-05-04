@@ -2,9 +2,9 @@
 
 #include <cmath>
 #include <cstdint>
+#include <string>
 #include <unordered_set>
 #include <vector>
-#include <string>
 
 class HNSW {
 private:
@@ -25,7 +25,8 @@ public:
     void erase(uint64_t key, const std::vector<float> &vec);
     std::vector<uint64_t> query(const std::vector<float> &q, int k);
 
-    void putFile(const std::string &root="./data/hnsw_data");
+    void putFile(const std::string &root = "./data/hnsw_data");
+    void loadFile(const std::string &root = "./data/hnsw_data");
 
 private:
     int search_layer_greedy(const std::vector<float> &q, int layer, int ep);
@@ -41,14 +42,18 @@ private:
     void put_file_deleted_nodes(const std::string &root);
     void put_file_nodes(const std::string &root);
 
+    void load_file_header(const std::string &root, uint32_t &size, uint32_t &dim);
+    void load_file_deleted_nodes(const std::string &root, const uint32_t &dim);
+    void load_file_nodes(const std::string &root, const uint32_t &size, const uint32_t &dim);
+
 private:
     std::vector<Node> nodes;
     std::vector<std::pair<uint64_t, std::vector<float>>> deleted_nodes;
     int entry_point;
 
-    const uint32_t M;
-    const uint32_t M_max;
-    const uint32_t ef_construction;
-    const uint32_t m_L;
+    uint32_t M;
+    uint32_t M_max;
+    uint32_t ef_construction;
+    uint32_t m_L;
     uint32_t top_layer;
 };

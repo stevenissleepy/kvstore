@@ -48,6 +48,7 @@ public:
 
     void load_embedding_from_disk(const std::string &data_root="./data/embedding_data");
     void save_hnsw_index_to_disk(const std::string &data_root="./data/hnsw_data");
+    void load_hnsw_index_from_disk(const std::string &data_root="./data/hnsw_data");
 
     std::vector<std::pair<std::uint64_t, std::string>> search_knn(std::string query, int k);
     std::vector<std::pair<std::uint64_t, std::string>> search_knn_hnsw(std::string query, int k);

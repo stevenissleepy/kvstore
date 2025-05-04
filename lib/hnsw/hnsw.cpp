@@ -252,7 +252,7 @@ void HNSW::putFile(const std::string &root) {
         utils::scanDir(root, files);
         for (auto &file : files) {
             std::string filename = root + "/" + file;
-            utils::rmfile(filename.data()) != 0;
+            utils::rmfile(filename.data());
         }
     }
 
@@ -263,6 +263,22 @@ void HNSW::putFile(const std::string &root) {
     put_file_header(root);
     put_file_deleted_nodes(root);
     put_file_nodes(root);
+}
+
+void HNSW::loadFile(const std::string &root) {
+    uint32_t size;    /* size if nodes */
+    uint32_t dim;     /* dim of vec */
+    load_file_header(root, size, dim);
+    load_file_deleted_nodes(root, dim);
+    load_file_nodes(root, size, dim);
+
+    /* 删除 root 下所有文件 */
+    std::vector<std::string> files;
+    utils::scanDir(root, files);
+    for (auto &file : files) {
+        std::string filename = root + "/" + file;
+        utils::rmfile(filename.data());
+    }
 }
 
 /**
@@ -371,5 +387,87 @@ void HNSW::put_file_nodes(const std::string &root) {
                 output.close();
             }
         }
+    }
+}
+
+void HNSW::load_file_header(const std::string &root, uint32_t& size, uint32_t& dim) {
+    std::string filename = root + "/global_header.bin";
+    std::ifstream input(filename, std::ios::binary);
+
+    input.read(reinterpret_cast<char *>(&M), sizeof(uint32_t));
+    input.read(reinterpret_cast<char *>(&M_max), sizeof(uint32_t));
+    input.read(reinterpret_cast<char *>(&ef_construction), sizeof(uint32_t));
+    input.read(reinterpret_cast<char *>(&m_L), sizeof(uint32_t));
+    input.read(reinterpret_cast<char *>(&top_layer), sizeof(uint32_t));
+    input.read(reinterpret_cast<char *>(&size), sizeof(uint32_t));
+    input.read(reinterpret_cast<char *>(&dim), sizeof(uint32_t));
+
+    input.close();
+}
+
+void HNSW::load_file_deleted_nodes(const std::string &root, const uint32_t& dim) {
+    std::string filename = root + "/deleted_nodes.bin";
+    std::ifstream input(filename, std::ios::binary);
+
+    while (input.peek() != EOF) {
+        uint64_t key;
+        input.read(reinterpret_cast<char *>(&key), sizeof(uint64_t));
+
+        std::vector<float> vec(dim);
+        input.read(reinterpret_cast<char *>(vec.data()), dim * sizeof(float));
+
+        deleted_nodes.emplace_back(key, vec);
+    }
+}
+
+void HNSW::load_file_nodes(const std::string &root, const uint32_t &size, const uint32_t &dim) {
+    std::string nodes_dir = root + "/nodes";
+
+    /* 读取各个节点 */
+    for (uint32_t i = 0; i < size; ++i) {
+        std::string node_dir = nodes_dir + "/" + std::to_string(i);
+
+        uint32_t max_layer;
+        uint64_t key;
+        std::vector<float> vec(dim);
+
+        /* 读取 header.bin */
+        {
+            std::string filename = node_dir + "/header.bin";
+            std::ifstream input(filename, std::ios::binary);
+
+            input.read(reinterpret_cast<char *>(&max_layer), sizeof(uint32_t));
+            input.read(reinterpret_cast<char *>(&key), sizeof(uint64_t));
+            input.read(reinterpret_cast<char *>(vec.data()), dim * sizeof(float));
+
+            nodes.emplace_back(key, vec, max_layer);
+            input.close();
+        }
+
+        Node newNode(key, vec, max_layer);
+
+        /* 读取 edges */
+        {
+            std::string edges_dir = node_dir + "/edges";
+
+            /* 读取每一层的邻接表 */
+            for (uint32_t layer = 0; layer <= max_layer; ++layer) {
+                std::string filename = edges_dir + "/" + std::to_string(layer) + ".bin";
+                std::ifstream input(filename, std::ios::binary);
+
+                /* 读取邻接表 */
+                uint32_t num_neighbors;
+                input.read(reinterpret_cast<char *>(&num_neighbors), sizeof(uint32_t));
+
+                std::vector<uint32_t> neighbors(num_neighbors);
+                input.read(reinterpret_cast<char *>(neighbors.data()), num_neighbors * sizeof(uint32_t));
+
+                newNode.neighbors[layer] = neighbors;
+                input.close();
+            }
+        }
+
+        /* 将节点添加到 HNSW 中 */
+        nodes.push_back(newNode);
     }
 }
