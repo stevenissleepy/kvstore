@@ -71,9 +71,13 @@ float HNSW::similarity_cos(const std::vector<float> &a, const std::vector<float>
     return sum / (sqrt(sum1) * sqrt(sum2));
 }
 
-bool HNSW::is_deleted(const std::vector<float> &vec) {
-    return std::any_of(deleted_nodes.begin(), deleted_nodes.end(),
-        [&](const std::vector<float> &deleted_vec) { return deleted_vec == vec; });
+bool HNSW::is_deleted(uint64_t key, const std::vector<float> &vec) {
+    for (const auto &deleted_node : deleted_nodes) {
+        if (deleted_node.first == key && deleted_node.second == vec) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
@@ -86,7 +90,7 @@ int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
 
         /* 找出邻居中最近的节点 */
         for (int neighbor_id : current_node.neighbors[layer]) {
-            if(is_deleted(nodes[neighbor_id].vec))
+            if(is_deleted(nodes[neighbor_id].key, nodes[neighbor_id].vec))
                 continue;
             
             float neighbor_dist = distance(q, nodes[neighbor_id].vec);
@@ -123,7 +127,7 @@ std::vector<std::pair<float, int>> HNSW::search_layer(const std::vector<float> &
         candidates.pop();
 
         /* 如果当前节点是删除的节点，跳过 */
-        if (is_deleted(nodes[current_id].vec))
+        if (is_deleted(nodes[current_id].key, nodes[current_id].vec))
             continue;
 
         /* 剪枝 */
@@ -195,8 +199,8 @@ void HNSW::insert(uint64_t key, const std::vector<float> &vec) {
     }
 }
 
-void HNSW::erase(std::vector<float> &vec) {
-    deleted_nodes.push_back(vec);
+void HNSW::erase(uint64_t key, const std::vector<float> &vec) {
+    deleted_nodes.emplace_back(key, vec);
 }
 
 std::vector<uint64_t> HNSW::query(const std::vector<float> &q, int k) {

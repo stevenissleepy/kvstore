@@ -172,10 +172,19 @@ std::string KVStore::get(uint64_t key) //
  * Returns false iff the key is not found.
  */
 bool KVStore::del(uint64_t key) {
+    /* del in lsm-tree */
     std::string res = get(key);
     if (!res.length())
         return false; // not exist
     put(key, DEL);    // put a del marker
+    
+    /* del in k-vec */
+    std::vector<float> vec = kvecTable.get(key);
+    kvecTable.del(key);
+
+    /* del in hnsw */
+    hnsw.erase(key, vec);
+
     return true;
 }
 
