@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>  
 
 std::vector<std::string> load_text(std::string filename) {
   std::ifstream file(filename);

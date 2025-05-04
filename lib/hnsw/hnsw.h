@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include <unordered_set>
 
 class HNSW {
 private:
@@ -20,6 +21,7 @@ private:
 public:
     HNSW(int M = 24, int M_max = 38, int ef = 30, int m_l = 6);
     void insert(uint64_t key, const std::vector<float> &vec);
+    void erase(std::vector<float> &vec);
     std::vector<uint64_t> query(const std::vector<float> &q, int k);
 
 private:
@@ -30,9 +32,11 @@ private:
     void connect(int id, int neighbor_id, int layer);
     float distance(const std::vector<float> &a, const std::vector<float> &b);
     float similarity_cos(const std::vector<float> &a, const std::vector<float> &b);
+    bool is_deleted(const std::vector<float> &vec);
 
 private:
     std::vector<Node> nodes;
+    std::vector<std::vector<float>> deleted_nodes;
     int entry_point;
     int top_layer;
     const int M;

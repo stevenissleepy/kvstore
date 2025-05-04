@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <queue>
-#include <unordered_set>
 
 HNSW::HNSW(int m, int M_max, int ef, int m_L) :
     M(m),
@@ -72,6 +71,11 @@ float HNSW::similarity_cos(const std::vector<float> &a, const std::vector<float>
     return sum / (sqrt(sum1) * sqrt(sum2));
 }
 
+bool HNSW::is_deleted(const std::vector<float> &vec) {
+    return std::any_of(deleted_nodes.begin(), deleted_nodes.end(),
+        [&](const std::vector<float> &deleted_vec) { return deleted_vec == vec; });
+}
+
 int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
     int current_id     = ep;
     Node &current_node = nodes[current_id];
@@ -80,8 +84,11 @@ int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
     while (true) {
         bool found_closer = false;
 
-        // 找出邻居中最近的节点
+        /* 找出邻居中最近的节点 */
         for (int neighbor_id : current_node.neighbors[layer]) {
+            if(is_deleted(nodes[neighbor_id].vec))
+                continue;
+            
             float neighbor_dist = distance(q, nodes[neighbor_id].vec);
 
             if (neighbor_dist < current_dist) {
@@ -90,7 +97,7 @@ int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
             }
         }
 
-        // 没有更近节点时终止循环
+        /* 没有更近节点时终止循环 */
         if (!found_closer)
             break;
     }
@@ -114,6 +121,10 @@ std::vector<std::pair<float, int>> HNSW::search_layer(const std::vector<float> &
     while (!candidates.empty()) {
         auto [current_dist, current_id] = candidates.top();
         candidates.pop();
+
+        /* 如果当前节点是删除的节点，跳过 */
+        if (is_deleted(nodes[current_id].vec))
+            continue;
 
         /* 剪枝 */
         if (topResults.size() >= ef_construction && current_dist > topResults.top().first)
@@ -182,6 +193,10 @@ void HNSW::insert(uint64_t key, const std::vector<float> &vec) {
         entry_point = newNodeId;
         top_layer   = newNode.max_layer;
     }
+}
+
+void HNSW::erase(std::vector<float> &vec) {
+    deleted_nodes.push_back(vec);
 }
 
 std::vector<uint64_t> HNSW::query(const std::vector<float> &q, int k) {

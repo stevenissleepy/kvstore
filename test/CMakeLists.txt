@@ -20,4 +20,6 @@ add_executable(vp_test_2 Vector_Persistent_Test_Phase2.cpp)
 target_link_libraries(vp_test_1 PUBLIC kvstore)
 target_link_libraries(vp_test_2 PUBLIC kvstore)
 
-
+# HNSW delete test
+add_executable(hnsw_delete_test HNSW_Delete_Test.cpp)
+target_link_libraries(hnsw_delete_test PUBLIC kvstore)
