@@ -43,6 +43,7 @@ int main() {
     pass = false;
   }
 
+  /* del test */
   for (auto &item : result) {
     store.del(item.first);
   }

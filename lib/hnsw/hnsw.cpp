@@ -164,15 +164,33 @@ std::vector<std::pair<float, int>> HNSW::search_layer(const std::vector<float> &
 void HNSW::insert(uint64_t key, const std::vector<float> &vec) {
     Node newNode(key, vec, random_layer());
     int newNodeId = nodes.size();
-    nodes.push_back(newNode);
 
     /* 如果是第一个节点 */
-    if (nodes.size() == 1) {
+    if (nodes.size() == 0) {
         nodes.push_back(newNode);
         entry_point = 0;
         top_layer   = newNode.max_layer;
         return;
     }
+
+    /* 如果是已经存在的节点 */
+    for(const auto &node : nodes) {
+        if (node.key == key) {
+            erase(node.key, node.vec);
+            break;
+        }
+    }
+
+    /* 如果是已经删除的节点 */
+    for (auto it = deleted_nodes.begin(); it != deleted_nodes.end(); ++it) {
+        if (it->first == key && it->second == vec) {
+            deleted_nodes.erase(it);
+            break;
+        }
+    }
+
+    /* 如果是新的节点 */
+    nodes.push_back(newNode);
 
     /* 贪心地搜索到 max_layer */
     int ep = entry_point;
