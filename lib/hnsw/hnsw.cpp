@@ -307,11 +307,15 @@ void HNSW::put_file_deleted_nodes(const std::string &root) {
  *        └── ...     # 其他存在的层级
  */
 void HNSW::put_file_nodes(const std::string &root) {
+    std::string nodes_dir = root + "/nodes";
+    if(!utils::dirExists(nodes_dir)){
+        utils::mkdir(nodes_dir.data());
+    }
 
     for (size_t i = 0; i < nodes.size(); ++i) {
-        std::string node_dir = root + "/" + std::to_string(i);
+        std::string node_dir = nodes_dir + "/" + std::to_string(i);
         if (!utils::dirExists(node_dir)) {
-            utils::_mkdir(node_dir.data());
+            utils::mkdir(node_dir.data());
         }
 
         /**
@@ -335,7 +339,7 @@ void HNSW::put_file_nodes(const std::string &root) {
         {
             std::string edges_dir = node_dir + "/edges";
             if (!utils::dirExists(edges_dir)) {
-                utils::_mkdir(edges_dir.data());
+                utils::mkdir(edges_dir.data());
             }
 
             /* 写入每一层的邻接表 */

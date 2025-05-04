@@ -25,7 +25,7 @@ public:
     void erase(uint64_t key, const std::vector<float> &vec);
     std::vector<uint64_t> query(const std::vector<float> &q, int k);
 
-    void putFile(const std::string &root);
+    void putFile(const std::string &root="./data/hnsw_data");
 
 private:
     int search_layer_greedy(const std::vector<float> &q, int layer, int ep);

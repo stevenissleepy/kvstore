@@ -23,3 +23,9 @@ target_link_libraries(vp_test_2 PUBLIC kvstore)
 # HNSW delete test
 add_executable(hnsw_delete_test HNSW_Delete_Test.cpp)
 target_link_libraries(hnsw_delete_test PUBLIC kvstore)
+
+# HNSW persistent test
+add_executable(hp_test1 HNSW_Persistent_Test_Phase1.cpp)
+add_executable(hp_test2 HNSW_Persistent_Test_Phase2.cpp)
+target_link_libraries(hp_test1 PUBLIC kvstore)
+target_link_libraries(hp_test2 PUBLIC kvstore)

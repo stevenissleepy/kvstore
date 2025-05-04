@@ -40,6 +40,10 @@ void KVStore::load_embedding_from_disk(const std::string &data_root) {
     kvecTable.loadFile(data_root);
 }
 
+void KVStore::save_hnsw_index_to_disk(const std::string &data_root) {
+    hnsw.putFile(data_root);
+}
+
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
 {
@@ -72,7 +76,7 @@ KVStore::~KVStore() {
         return; // empty sstable
     std::string path = std::string("./data/level-0/");
     if (!utils::dirExists(path)) {
-        utils::_mkdir(path.data());
+        utils::mkdir(path.data());
         totalLevel = 0;
     }
     ss.putFile(ss.getFilename().data());
