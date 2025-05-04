@@ -64,7 +64,7 @@ KVStore::KVStore(const std::string &dir) :
 
 KVStore::~KVStore() {
     /* put k-vec */
-    kvecTable.putFile("./embedding_data");
+    kvecTable.putFile("./data/embedding_data");
 
     /* put k-value */
     sstable ss(s);
@@ -100,7 +100,7 @@ void KVStore::put(uint64_t key, const std::string &val) {
         s->insert(key, val); // 小于等于（不超过） 2MB
     else {
         /* put k-vec */
-        kvecTable.putFile("./embedding_data");
+        kvecTable.putFile("./data/embedding_data");
 
         /* put k-value */
         sstable ss(s);
