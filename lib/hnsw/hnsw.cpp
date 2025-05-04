@@ -402,6 +402,8 @@ void HNSW::load_file_header(const std::string &root, uint32_t& size, uint32_t& d
     input.read(reinterpret_cast<char *>(&size), sizeof(uint32_t));
     input.read(reinterpret_cast<char *>(&dim), sizeof(uint32_t));
 
+    entry_point = 0;
+
     input.close();
 }
 
