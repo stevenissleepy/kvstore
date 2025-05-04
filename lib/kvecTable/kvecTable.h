@@ -9,17 +9,17 @@ class KvecTable {
 public:
     KvecTable();
 
-    std::vector<float> get(uint64_t key, const std::string &data_root = "./data/kvec") const;
+    std::vector<float> get(uint64_t key, const std::string &data_root = "./embedding_data") const;
 
     void put(uint64_t key, const std::vector<float> &vec);
 
     void del(uint64_t key);
 
-    void putFile(const std::string &data_root = "./data/kvec");
+    void putFile(const std::string &data_root = "./embedding_data");
 
-    void loadFile(const std::string &data_root = "./data/kvec");
+    void loadFile(const std::string &data_root = "./embedding_data");
 
-    void reset(const std::string &data_root = "./data/kvec");
+    void reset(const std::string &data_root = "./embedding_data");
 
     std::unordered_set<uint64_t> getKeys() const;
 

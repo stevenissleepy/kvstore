@@ -1,6 +1,7 @@
 # Ignore build directories
 /build/
 /data/
+/embedding_data/
 /CMakeFiles/
 /CMakeCache.txt
 /cmake_install.cmake
