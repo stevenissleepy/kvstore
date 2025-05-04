@@ -288,6 +288,7 @@ void HNSW::loadFile(const std::string &root) {
  * uint32_t ef_construction
  * uint32_t m_L
  * uint32_t top_layer
+ * uint32_t entry_point
  * uint32_t nodes.size()
  * uint32_t dim
  */
@@ -300,6 +301,7 @@ void HNSW::put_file_header(const std::string &root) {
     output.write(reinterpret_cast<const char *>(&ef_construction), sizeof(uint32_t));
     output.write(reinterpret_cast<const char *>(&m_L), sizeof(uint32_t));
     output.write(reinterpret_cast<const char *>(&top_layer), sizeof(uint32_t));
+    output.write(reinterpret_cast<const char *>(&entry_point), sizeof(uint32_t));
     uint32_t size = nodes.size();
     output.write(reinterpret_cast<const char *>(&size), sizeof(uint32_t));
     uint32_t dim = nodes.empty() ? 0 : nodes[0].vec.size();
@@ -399,10 +401,9 @@ void HNSW::load_file_header(const std::string &root, uint32_t& size, uint32_t& d
     input.read(reinterpret_cast<char *>(&ef_construction), sizeof(uint32_t));
     input.read(reinterpret_cast<char *>(&m_L), sizeof(uint32_t));
     input.read(reinterpret_cast<char *>(&top_layer), sizeof(uint32_t));
+    input.read(reinterpret_cast<char *>(&entry_point), sizeof(uint32_t));
     input.read(reinterpret_cast<char *>(&size), sizeof(uint32_t));
     input.read(reinterpret_cast<char *>(&dim), sizeof(uint32_t));
-
-    entry_point = 0;
 
     input.close();
 }

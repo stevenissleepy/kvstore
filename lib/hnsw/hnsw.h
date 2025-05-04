@@ -49,11 +49,11 @@ private:
 private:
     std::vector<Node> nodes;
     std::vector<std::pair<uint64_t, std::vector<float>>> deleted_nodes;
-    int entry_point;
 
     uint32_t M;
     uint32_t M_max;
     uint32_t ef_construction;
     uint32_t m_L;
     uint32_t top_layer;
+    uint32_t entry_point;
 };
