@@ -442,7 +442,6 @@ void HNSW::load_file_nodes(const std::string &root, const uint32_t &size, const 
             input.read(reinterpret_cast<char *>(&key), sizeof(uint64_t));
             input.read(reinterpret_cast<char *>(vec.data()), dim * sizeof(float));
 
-            nodes.emplace_back(key, vec, max_layer);
             input.close();
         }
 
