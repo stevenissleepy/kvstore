@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <queue>
+#include "utils/utils.h"
 
 HNSW::HNSW(int m, int M_max, int ef, int m_L) :
     M(m),
@@ -17,7 +19,7 @@ inline int HNSW::random_layer() {
 }
 
 inline void HNSW::connect(int id, int neighbor_id, int layer) {
-    auto &current_node = nodes[id];
+    auto &current_node  = nodes[id];
     auto &neighbor_node = nodes[neighbor_id];
 
     /* 连接两个 node */
@@ -27,15 +29,16 @@ inline void HNSW::connect(int id, int neighbor_id, int layer) {
     /* 如果邻居节点的 neighbor 数量大于 M_max */
     if (neighbor_node.neighbors[layer].size() > M_max) {
         /* 找到最远的邻居 */
-        auto &neighbors = neighbor_node.neighbors[layer];
-        auto max_it     = std::max_element(neighbors.begin(), neighbors.end(),
-            [&](int a, int b) { return distance(nodes[neighbor_id].vec, nodes[a].vec) < distance(nodes[neighbor_id].vec, nodes[b].vec); });
+        auto &neighbors     = neighbor_node.neighbors[layer];
+        auto max_it         = std::max_element(neighbors.begin(), neighbors.end(), [&](int a, int b) {
+            return distance(nodes[neighbor_id].vec, nodes[a].vec) < distance(nodes[neighbor_id].vec, nodes[b].vec);
+        });
         int max_neighbor_id = *max_it;
 
         /* 删除最远的邻居 */
         neighbors.erase(max_it);
         auto &max_neighbor = nodes[max_neighbor_id];
-        auto it           = std::find(max_neighbor.neighbors[layer].begin(), max_neighbor.neighbors[layer].end(), neighbor_id);
+        auto it = std::find(max_neighbor.neighbors[layer].begin(), max_neighbor.neighbors[layer].end(), neighbor_id);
         if (it != max_neighbor.neighbors[layer].end()) {
             max_neighbor.neighbors[layer].erase(it);
         }
@@ -44,7 +47,7 @@ inline void HNSW::connect(int id, int neighbor_id, int layer) {
 
 /* 余弦相似度越大，距离越短 */
 inline float HNSW::distance(const std::vector<float> &a, const std::vector<float> &b) {
-    return - similarity_cos(a, b);
+    return -similarity_cos(a, b);
 }
 
 float HNSW::similarity_cos(const std::vector<float> &a, const std::vector<float> &b) {
@@ -90,9 +93,9 @@ int HNSW::search_layer_greedy(const std::vector<float> &q, int layer, int ep) {
 
         /* 找出邻居中最近的节点 */
         for (int neighbor_id : current_node.neighbors[layer]) {
-            if(is_deleted(nodes[neighbor_id].key, nodes[neighbor_id].vec))
+            if (is_deleted(nodes[neighbor_id].key, nodes[neighbor_id].vec))
                 continue;
-            
+
             float neighbor_dist = distance(q, nodes[neighbor_id].vec);
 
             if (neighbor_dist < current_dist) {
@@ -174,7 +177,7 @@ void HNSW::insert(uint64_t key, const std::vector<float> &vec) {
     }
 
     /* 如果是已经存在的节点 */
-    for(const auto &node : nodes) {
+    for (const auto &node : nodes) {
         if (node.key == key) {
             erase(node.key, node.vec);
             break;
@@ -230,13 +233,128 @@ std::vector<uint64_t> HNSW::query(const std::vector<float> &q, int k) {
 
     /* 在第0层进行精确搜索 */
     auto candidates = search_layer(q, 0, ep);
-    
+
     /* 选出前k个最近邻 */
     std::vector<uint64_t> results;
     size_t size = std::min(static_cast<size_t>(k), candidates.size());
     for (size_t i = 0; i < size; ++i) {
         results.push_back(nodes[candidates[i].second].key);
     }
-    
+
     return results;
+}
+
+void HNSW::putFile(const std::string &root) {
+    if (!utils::dirExists(root)) {
+        utils::mkdir(root.data());
+    }
+
+    put_file_header(root);
+    put_file_deleted_nodes(root);
+    put_file_nodes(root);
+}
+
+/**
+ * global header 的结构如下
+ * uint32_t M
+ * uint32_t M_max
+ * uint32_t ef_construction
+ * uint32_t m_L
+ * uint32_t top_layer
+ * uint32_t nodes.size()
+ * uint32_t dim
+ */
+void HNSW::put_file_header(const std::string &root) {
+    std::string filename = root + "/global_header.bin";
+    std::ofstream output(filename, std::ios::binary);
+
+    output.write(reinterpret_cast<const char *>(&M), sizeof(uint32_t));
+    output.write(reinterpret_cast<const char *>(&M_max), sizeof(uint32_t));
+    output.write(reinterpret_cast<const char *>(&ef_construction), sizeof(uint32_t));
+    output.write(reinterpret_cast<const char *>(&m_L), sizeof(uint32_t));
+    output.write(reinterpret_cast<const char *>(&top_layer), sizeof(uint32_t));
+    uint32_t size = nodes.size();
+    output.write(reinterpret_cast<const char *>(&size), sizeof(uint32_t));
+    uint32_t dim = nodes.empty() ? 0 : nodes[0].vec.size();
+    output.write(reinterpret_cast<const char *>(&dim), sizeof(uint32_t));
+    output.close();
+}
+
+/**
+ * deleted_nodes.bin 的结构如下
+ * uint64_t key
+ * float vec[dim]
+ */
+void HNSW::put_file_deleted_nodes(const std::string &root) {
+    std::string filename = root + "/deleted_nodes.bin";
+    std::ofstream output(filename, std::ios::binary);
+
+    uint32_t dim = nodes.empty() ? 0 : nodes[0].vec.size();
+    for (const auto &deleted_node : deleted_nodes) {
+        output.write(reinterpret_cast<const char *>(&deleted_node.first), sizeof(uint64_t));
+        output.write(reinterpret_cast<const char *>(deleted_node.second.data()), dim * sizeof(float));
+    }
+    output.close();
+}
+
+/**
+ * nodes 结构如下
+ * ── 0/              # 节点0的数据
+ *    ├── header.bin  # 节点参数文件
+ *    └── edges/      # 邻接表目录
+ *        ├── 0.bin   # 第0层邻接表
+ *        ├── 1.bin   # 第1层邻接表
+ *        └── ...     # 其他存在的层级
+ */
+void HNSW::put_file_nodes(const std::string &root) {
+
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        std::string node_dir = root + "/" + std::to_string(i);
+        if (!utils::dirExists(node_dir)) {
+            utils::_mkdir(node_dir.data());
+        }
+
+        /**
+         * 写入 header.bin
+         * uint32_t max_layer
+         * uint64_t key
+         * float vec[dim]
+         */
+        {
+            std::string filename = node_dir + "/header.bin";
+            std::ofstream output(filename, std::ios::binary);
+
+            uint32_t max_layer = nodes[i].max_layer;
+            output.write(reinterpret_cast<const char *>(&max_layer), sizeof(uint32_t));
+            output.write(reinterpret_cast<const char *>(&nodes[i].key), sizeof(uint64_t));
+            output.write(reinterpret_cast<const char *>(nodes[i].vec.data()), nodes[i].vec.size() * sizeof(float));
+            output.close();
+        }
+
+        /* 写入 edges */
+        {
+            std::string edges_dir = node_dir + "/edges";
+            if (!utils::dirExists(edges_dir)) {
+                utils::_mkdir(edges_dir.data());
+            }
+
+            /* 写入每一层的邻接表 */
+            uint32_t max_layer = nodes[i].max_layer;
+            for (uint32_t layer = 0; layer <= max_layer; ++layer) {
+                std::string filename = edges_dir + "/" + std::to_string(layer) + ".bin";
+                std::ofstream output(filename, std::ios::binary);
+
+                /** 
+                 * 写入邻接表
+                 * uint32_t num_neighbors
+                 * uint32_t neighbors[num_neighbors]
+                 */ 
+                const auto &neighbors  = nodes[i].neighbors[layer];
+                uint32_t num_neighbors = neighbors.size();
+                output.write(reinterpret_cast<const char *>(&num_neighbors), sizeof(uint32_t));
+                output.write(reinterpret_cast<const char *>(neighbors.data()), num_neighbors * sizeof(uint32_t));
+                output.close();
+            }
+        }
+    }
 }
