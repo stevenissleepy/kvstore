@@ -92,12 +92,6 @@ KVStore::~KVStore() {
  * No return values for simplicity.
  */
 void KVStore::put(uint64_t key, const std::string &val) {
-    // put key-vector
-    std::vector<float> vec = embedding_single(val);
-    kvecTable.put(key, vec);
-    // hnsw.insert(key, vec);
-
-    // put key-value
     uint32_t nxtsize = s->getBytes();
     std::string res  = s->search(key);
     if (!res.length()) { // new add
@@ -124,6 +118,11 @@ void KVStore::put(uint64_t key, const std::string &val) {
         compaction();
         s->insert(key, val);
     }
+}
+
+void KVStore::put(uint64_t key, const std::vector<float> &vec) {
+    kvecTable.put(key, vec);
+    // hnsw.insert(key, vec);
 }
 
 /**

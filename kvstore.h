@@ -30,6 +30,7 @@ public:
     ~KVStore();
 
     void put(uint64_t key, const std::string &s) override;
+    void put(uint64_t key, const std::vector<float> &vec);
 
     std::string get(uint64_t key) override;
 
