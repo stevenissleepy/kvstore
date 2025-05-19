@@ -40,13 +40,13 @@ void KVStore::load_embedding_from_disk(const std::string &data_root) {
     kvecTable.loadFile(data_root);
 }
 
-void KVStore::save_hnsw_index_to_disk(const std::string &data_root) {
-    hnsw.putFile(data_root);
-}
+// void KVStore::save_hnsw_index_to_disk(const std::string &data_root) {
+//     hnsw.putFile(data_root);
+// }
 
-void KVStore::load_hnsw_index_from_disk(const std::string &data_root) {
-    hnsw.loadFile(data_root);
-}
+// void KVStore::load_hnsw_index_from_disk(const std::string &data_root) {
+//     hnsw.loadFile(data_root);
+// }
 
 KVStore::KVStore(const std::string &dir) :
     KVStoreAPI(dir) // read from sstables
@@ -95,7 +95,7 @@ void KVStore::put(uint64_t key, const std::string &val) {
     // put key-vector
     std::vector<float> vec = embedding_single(val);
     kvecTable.put(key, vec);
-    hnsw.insert(key, vec);
+    // hnsw.insert(key, vec);
 
     // put key-value
     uint32_t nxtsize = s->getBytes();
@@ -191,7 +191,7 @@ bool KVStore::del(uint64_t key) {
     kvecTable.del(key);
 
     /* del in hnsw */
-    hnsw.erase(key, vec);
+    // hnsw.erase(key, vec);
 
     return true;
 }
@@ -475,15 +475,15 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
     return res;
 }
 
-std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn_hnsw(std::string query, int k) {
-    /* 找出最接近的 k 个 key */
-    std::vector<float> vec    = embedding_single(query);
-    std::vector<uint64_t> knn = hnsw.query(vec, k);
+// std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn_hnsw(std::string query, int k) {
+//     /* 找出最接近的 k 个 key */
+//     std::vector<float> vec    = embedding_single(query);
+//     std::vector<uint64_t> knn = hnsw.query(vec, k);
 
-    /* 通过 key 找到对应的 key-value */
-    std::vector<std::pair<std::uint64_t, std::string>> res;
-    for (uint64_t key : knn) {
-        res.emplace_back(key, get(key));
-    }
-    return res;
-}
+//     /* 通过 key 找到对应的 key-value */
+//     std::vector<std::pair<std::uint64_t, std::string>> res;
+//     for (uint64_t key : knn) {
+//         res.emplace_back(key, get(key));
+//     }
+//     return res;
+// }
