@@ -186,7 +186,7 @@ bool KVStore::del(uint64_t key) {
     put(key, DEL);    // put a del marker
     
     /* del in k-vec */
-    std::vector<float> vec = kvecTable.get(key);
+    // std::vector<float> vec = kvecTable.get(key);
     kvecTable.del(key);
 
     /* del in hnsw */
