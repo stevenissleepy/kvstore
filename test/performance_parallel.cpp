@@ -4,36 +4,35 @@
 #include <functional>
 #include <fstream>
 
-void measure_put(KVStore& store, int num_operations, const std::vector<std::string>& texts, const std::vector<std::vector<float>>& vectors);
+void measure_put(KVStore& store, int num_operations);
 void measure_get(KVStore& store, int num_operations);
 void measure_del(KVStore& store, int num_operations);
 void performance_test(int num_operations);
-std::vector<std::string> get_texts(int num, std::string& file);
-std::vector<std::vector<float>> get_vectors(int num, std::string& file); 
+
+std::vector<std::string> texts;
+std::vector<std::vector<float>> vectors;
+void get_texts(int num, std::string file);
+void get_vectors(int num, std::string file); 
 
 int main() {
-    int num_operations = 50000;
+    int num_operations = 90000;
+    get_texts(num_operations, "./data/cleaned_text_100k.txt");
+    get_vectors(num_operations, "./data/embedding_100k.txt");
     performance_test(num_operations);
 
     return 0;
 }
 
 void performance_test(int num_operations) {
-    std::string dir = "./data";
-    std::string txt_file = "./data/cleaned_text_100k.txt";
-    std::string vec_file = "./data/embedding_100k.txt";
-    
-    KVStore store(dir);
+    KVStore store("./data");
     store.reset();
-    std::vector<std::string> texts = get_texts(num_operations, txt_file);
-    std::vector<std::vector<float>> vectors = get_vectors(num_operations, vec_file);
 
-    measure_put(store, num_operations, texts, vectors);
+    measure_put(store, num_operations);
     measure_get(store, num_operations);
     measure_del(store, num_operations);
 }
 
-void measure_put(KVStore& store, int num_operations, const std::vector<std::string>& texts, const std::vector<std::vector<float>>& vectors) {
+void measure_put(KVStore& store, int num_operations) {
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < num_operations; ++i) {
         store.put(i, texts[i]);
@@ -76,8 +75,7 @@ void measure_del(KVStore& store, int num_operations) {
               << "吞吐量: "   << (num_operations * 1e6 / duration) << " ops/s" << std::endl;
 }
 
-std::vector<std::string> get_texts(int num, std::string& file) {
-    std::vector<std::string> texts;
+void get_texts(int num, std::string file) {
     std::ifstream infile(file);
     std::string line;
     while (std::getline(infile, line)) {
@@ -85,11 +83,9 @@ std::vector<std::string> get_texts(int num, std::string& file) {
         texts.push_back(line);
         if (texts.size() >= num) break; // 读取指定数量的文本
     }
-    return texts;
 }
 
-std::vector<std::vector<float>> get_vectors(int num, std::string& file) {
-    std::vector<std::vector<float>> vectors;
+void get_vectors(int num, std::string file) {
     std::ifstream infile(file);
     std::string line;
     while (std::getline(infile, line)) {
@@ -110,5 +106,4 @@ std::vector<std::vector<float>> get_vectors(int num, std::string& file) {
         vectors.push_back(std::move(vec));
         if (vectors.size() >= num) break;
     }
-    return vectors;
 }
