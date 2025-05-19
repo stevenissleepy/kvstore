@@ -29,3 +29,7 @@ target_link_libraries(vp_test_2 PUBLIC kvstore)
 # add_executable(hp_test2 HNSW_Persistent_Test_Phase2.cpp)
 # target_link_libraries(hp_test1 PUBLIC kvstore)
 # target_link_libraries(hp_test2 PUBLIC kvstore)
+
+# parallel test
+add_executable(parallel performance_parallel.cpp)
+target_link_libraries(parallel PUBLIC kvstore)
