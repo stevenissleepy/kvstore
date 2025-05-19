@@ -4,6 +4,8 @@
 #include <functional>
 #include <fstream>
 
+const int max_num = 49998;
+
 void measure_put(KVStore& store, int num_operations);
 void measure_get(KVStore& store, int num_operations);
 void measure_del(KVStore& store, int num_operations);
@@ -15,7 +17,7 @@ void get_texts(int num, std::string file);
 void get_vectors(int num, std::string file); 
 
 int main() {
-    int num_operations = 90000;
+    int num_operations = 49998;
     get_texts(num_operations, "./data/cleaned_text_100k.txt");
     get_vectors(num_operations, "./data/embedding_100k.txt");
     performance_test(num_operations);
@@ -76,6 +78,8 @@ void measure_del(KVStore& store, int num_operations) {
 }
 
 void get_texts(int num, std::string file) {
+    num = std::min(num, max_num);
+
     std::ifstream infile(file);
     std::string line;
     while (std::getline(infile, line)) {
@@ -86,9 +90,14 @@ void get_texts(int num, std::string file) {
 }
 
 void get_vectors(int num, std::string file) {
+    num = std::min(num, max_num);
+
     std::ifstream infile(file);
     std::string line;
+    int line_no = 0;
     while (std::getline(infile, line)) {
+        ++line_no;
+        if (line_no % 2 == 0) continue; // 只处理奇数行
         if (line.empty()) continue;
         if (line.front() == '[') line = line.substr(1);
         if (!line.empty() && line.back() == ']') line.pop_back();
@@ -99,7 +108,6 @@ void get_vectors(int num, std::string file) {
             vec.push_back(std::stof(line.substr(start, end - start)));
             start = end + 1;
         }
-        // 最后一个数字
         if (start < line.size())
             vec.push_back(std::stof(line.substr(start)));
 
