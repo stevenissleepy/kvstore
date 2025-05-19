@@ -136,14 +136,17 @@ std::string KVStore::get(uint64_t key) //
     uint32_t goalLen;
     std::string goalUrl;
     std::string res = s->search(key);
-    if (res.length()) { // 在memtable中找到, 或者是deleted，说明最近被删除过，
-                        // 不用查sstable
+
+    /* 在memtable中找到, 或者是deleted，说明最近被删除过 */
+    if (res.length()) { 
         if (res == DEL)
             return "";
         return res;
     }
+
+    /* 在sstable中寻找 */
     for (int level = 0; level <= totalLevel; ++level) {
-        for (sstablehead it : sstableIndex[level]) {
+        for (sstablehead& it : sstableIndex[level]) {
             if (key < it.getMinV() || key > it.getMaxV())
                 continue;
             uint32_t len;
