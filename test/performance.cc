@@ -17,6 +17,7 @@ void measure_operation(const std::string &operation, int num_operations, const s
 
 void performance_test(const std::string &dir, int num_operations) {
     KVStore store(dir);
+    store.reset();
     std::string value = std::string(100, 'x'); 
 
     /* PUT 操作 */
