@@ -31,8 +31,9 @@
 .DS_Store
 Thumbs.db
 
-persistence
-bench
-correctness
-
+# Ignore data
 model
+
+# Ignore perf
+perf.data
+perf.svg
