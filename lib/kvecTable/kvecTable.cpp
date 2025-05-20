@@ -126,7 +126,11 @@ void KvecTable::reset(const std::string &data_root) {
     dim = 0;
     table.clear();
     if(utils::dirExists(data_root)) {
-        utils::rmdir(data_root.c_str());
+        std::vector<std::string> files;
+        utils::scanDir(data_root, files);
+        for (const auto &file : files) {
+            utils::rmfile((data_root + "/" + file).c_str());
+        }
     }
 }
 
