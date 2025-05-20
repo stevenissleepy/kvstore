@@ -35,5 +35,4 @@ Thumbs.db
 model
 
 # Ignore perf
-perf.data
-perf.svg
+perf.*
