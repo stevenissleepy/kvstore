@@ -12,6 +12,8 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <thread>
+#include <unordered_map>
 
 static const std::string DEL = "~DELETED~";
 const uint32_t MAXSIZE       = 2 * 1024 * 1024;
@@ -36,16 +38,40 @@ bool KVStore::sstable_num_out_of_limit(int level) {
     return sstableIndex[level].size() > limit;
 }
 
-void KVStore::merge_sstables(std::vector<sstablehead> &ssts, std::map<uint64_t, std::string> &pairs) {
-    for (sstablehead &it : ssts) {
-        sstable ss(it);
-        int cnt = ss.getCnt();
-        for (int i = 0; i < cnt; ++i) {
-            uint64_t key    = ss.getKey(i);
-            std::string val = ss.getData(i);
-            pairs[key]      = val;
+void KVStore::merge_sstables(std::vector<sstablehead>& ssts, std::map<uint64_t, std::string>& pairs) {
+    size_t sst_num = ssts.size();
+    unsigned int thread_num = std::min<unsigned int>(std::thread::hardware_concurrency(), sst_num);
+    std::vector<std::unordered_map<uint64_t, std::string>> partial_pairs(thread_num);
+    std::vector<std::thread> threads;
+
+    /* 线程各自写入自己的 partial_pairs */
+    auto worker = [&](size_t tid) {
+        for (size_t i = tid; i < sst_num; i += thread_num) {
+            sstable ss(ssts[i]);
+            const int cnt = ss.getCnt();
+            for (int j = 0; j < cnt; ++j) {
+                auto&& key = ss.getKey(j);
+                partial_pairs[tid][key] = ss.getData(j);
+            }
         }
-        delsstable(it.getFilename());
+    };
+
+    /* 创建并执行线程 */
+    for (unsigned t = 0; t < thread_num; ++t) {
+        threads.emplace_back(worker, t);
+    }
+    for (auto& th : threads) th.join();
+
+    /* 合并结果（按线程顺序保证正确性）*/
+    for (auto& pmap : partial_pairs) {
+        for (auto&& [key, val] : pmap) {
+            pairs[key] = std::move(val);
+        }
+    }
+
+    /* 删除原来的 sstables */
+    for (auto&& sst : ssts) {
+        delsstable(sst.getFilename());
     }
 }
 
