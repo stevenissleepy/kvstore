@@ -54,5 +54,7 @@ public:
     // void load_hnsw_index_from_disk(const std::string &data_root="./data/hnsw_data");
 
     std::vector<std::pair<std::uint64_t, std::string>> search_knn(std::string query, int k);
+    std::vector<std::pair<std::uint64_t, std::string>> search_knn(std::vector<float> vec, int k);
+    std::vector<std::pair<std::uint64_t, std::string>> search_knn_parallel(std::vector<float> vec, int k);
     // std::vector<std::pair<std::uint64_t, std::string>> search_knn_hnsw(std::string query, int k);
 };

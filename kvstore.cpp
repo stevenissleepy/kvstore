@@ -480,7 +480,10 @@ std::string KVStore::fetchString(std::string file, int startOffset, uint32_t len
 
 std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::string query, int k) {
     std::vector<float> vec = embedding_single(query);
+    return search_knn(vec, k);
+}
 
+std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::vector<float> vec, int k) {
     /* 获取每个 kv 与目标的余弦相似度 */
     size_t n_embd = vec.size();
     std::vector<std::pair<uint64_t, float>> ksimTable;
@@ -496,6 +499,57 @@ std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn(std::stri
     std::partial_sort(
         ksimTable.begin(),
         ksimTable.begin() + k,
+        ksimTable.end(),
+        [](const std::pair<uint64_t, float> &a, const std::pair<uint64_t, float> &b) { return a.second > b.second; }
+    );
+
+    /* 取前k个 */
+    std::vector<std::pair<std::uint64_t, std::string>> res;
+    for (int i = 0; i < k; ++i) {
+        if(ksimTable.size() <= i) break;
+        res.emplace_back(ksimTable[i].first, get(ksimTable[i].first));
+    }
+
+    return res;
+}
+
+std::vector<std::pair<std::uint64_t, std::string>> KVStore::search_knn_parallel(std::vector<float> vec, int k) {
+    /* 获取每个 kv 与目标的余弦相似度 */
+    size_t n_embd = vec.size();
+    std::vector<std::pair<uint64_t, float>> ksimTable;
+    std::unordered_set<uint64_t> keys = kvecTable.getKeys();
+
+    /* 并行计算相似度 */
+    std::vector<uint64_t> key_vec(keys.begin(), keys.end());
+    size_t total = key_vec.size();
+    unsigned int thread_num = std::min<unsigned int>(std::thread::hardware_concurrency(), total);
+    if (thread_num == 0) thread_num = 1;
+    size_t chunk_size = (total + thread_num - 1) / thread_num;
+    std::vector<std::vector<std::pair<uint64_t, float>>> partial_ksim(thread_num);
+
+    std::vector<std::thread> threads;
+    for (unsigned int t = 0; t < thread_num; ++t) {
+        size_t start = t * chunk_size;
+        size_t end = std::min(start + chunk_size, total);
+        threads.emplace_back([&, start, end, t]() {
+            for (size_t i = start; i < end; ++i) {
+                uint64_t key = key_vec[i];
+                std::vector<float> vec2 = kvecTable.get(key);
+                float sim = common_embd_similarity_cos(vec.data(), vec2.data(), n_embd);
+                partial_ksim[t].emplace_back(key, sim);
+            }
+        });
+    }
+    for (auto& th : threads) th.join();
+
+    for (auto& part : partial_ksim) {
+        ksimTable.insert(ksimTable.end(), part.begin(), part.end());
+    }
+
+    /* 根据余弦相似度排序 */
+    std::partial_sort(
+        ksimTable.begin(),
+        ksimTable.begin() + std::min<size_t>(k, ksimTable.size()),
         ksimTable.end(),
         [](const std::pair<uint64_t, float> &a, const std::pair<uint64_t, float> &b) { return a.second > b.second; }
     );

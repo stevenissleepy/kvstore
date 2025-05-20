@@ -9,6 +9,7 @@ const int max_num = 49998;
 void measure_put(KVStore& store, int num_operations);
 void measure_get(KVStore& store, int num_operations);
 void measure_del(KVStore& store, int num_operations);
+void measure_knn(KVStore& store, int num_operations);
 void performance_test(int num_operations);
 
 std::vector<std::string> texts;
@@ -30,6 +31,7 @@ void performance_test(int num_operations) {
     store.reset();
 
     measure_put(store, num_operations);
+    measure_knn(store, num_operations);
     measure_get(store, num_operations);
     measure_del(store, num_operations);
 }
@@ -72,6 +74,23 @@ void measure_del(KVStore& store, int num_operations) {
 
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
     std::cout << "DEL" << ": " << num_operations << " operations, "
+              << "总耗时: "   << duration << " us, "
+              << "平均耗时: " << (duration / num_operations) << " us/op, "
+              << "吞吐量: "   << (num_operations * 1e6 / duration) << " ops/s" << std::endl;
+}
+
+void measure_knn(KVStore& store, int num_operations) {
+    auto vec = vectors[0];
+    num_operations = std::min(10, num_operations);
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < num_operations; i++){
+        store.search_knn_parallel(vec, 5);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << "kNN" << ": " << num_operations << " operations, "
               << "总耗时: "   << duration << " us, "
               << "平均耗时: " << (duration / num_operations) << " us/op, "
               << "吞吐量: "   << (num_operations * 1e6 / duration) << " ops/s" << std::endl;
