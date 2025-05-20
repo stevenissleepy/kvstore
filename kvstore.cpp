@@ -216,6 +216,9 @@ void KVStore::reset() {
         sstableIndex[level].clear();
     }
     totalLevel = -1;
+
+    /* 清空 kvtable*/
+    kvecTable.reset("./data/embedding_data");
 }
 
 /**
