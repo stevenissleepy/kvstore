@@ -36,6 +36,19 @@ bool KVStore::sstable_num_out_of_limit(int level) {
     return sstableIndex[level].size() > limit;
 }
 
+void KVStore::merge_sstables(std::vector<sstablehead> &ssts, std::map<uint64_t, std::string> &pairs) {
+    for (sstablehead &it : ssts) {
+        sstable ss(it);
+        int cnt = ss.getCnt();
+        for (int i = 0; i < cnt; ++i) {
+            uint64_t key    = ss.getKey(i);
+            std::string val = ss.getData(i);
+            pairs[key]      = val;
+        }
+        delsstable(it.getFilename());
+    }
+}
+
 void KVStore::load_embedding_from_disk(const std::string &data_root) {
     kvecTable.loadFile(data_root);
 }
@@ -355,16 +368,7 @@ void KVStore::compaction() {
 
         // 合并 ssts 中的 sstable
         std::map<uint64_t, std::string> pairs;
-        for (sstablehead &it : ssts) {
-            sstable ss(it);
-            int cnt = ss.getCnt();
-            for (int i = 0; i < cnt; ++i) {
-                uint64_t key    = ss.getKey(i);
-                std::string val = ss.getData(i);
-                pairs[key]      = val;
-            }
-            delsstable(it.getFilename());
-        }
+        merge_sstables(ssts, pairs);
 
         // 生成新的 sstable
         sstable newSs;

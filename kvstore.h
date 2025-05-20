@@ -12,7 +12,9 @@
 
 class KVStore : public KVStoreAPI {
 private:
+    /* compaction 工具函数 */
     bool sstable_num_out_of_limit(int level);
+    void merge_sstables(std::vector<sstablehead> &ssts, std::map<uint64_t, std::string> &pairs);
 
 private:
     // key-value
