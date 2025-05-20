@@ -181,8 +181,8 @@ std::vector<std::pair<uint64_t, std::vector<float>>> KvecTable::read_file(const 
 }
 
 std::vector<float> KvecTable::del_vec() const {
-    std::vector<float> result(dim, std::numeric_limits<float>::max());
-    return result;
+    static thread_local std::vector<float> del_vec = std::vector<float>(dim, std::numeric_limits<float>::max());
+    return del_vec;
 }
 
 bool KvecTable::is_del_vec(const std::vector<float> &vec) const {
