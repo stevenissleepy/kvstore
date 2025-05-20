@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <fstream>
 #include <limits>
+#include <thread>
 
 KvecTable::KvecTable() {}
 
@@ -68,7 +69,7 @@ void KvecTable::putFile(const std::string &data_root) {
         utils::mkdir(data_root.c_str());
     }
 
-    /* get file name */
+    /* 获取当前已有的最大文件编号 */
     int file_num = 0;
     std::vector<std::string> files;
     utils::scanDir(data_root, files);
@@ -76,19 +77,29 @@ void KvecTable::putFile(const std::string &data_root) {
         int num = std::stoi(file.substr(0, file.find('.')));
         file_num = std::max(file_num, num);
     }
-    std::string file_name = data_root + "/" + std::to_string(file_num + 1) + ".kvec";
-    std::ofstream outfile(file_name, std::ios::binary);
 
-    /* write dim */
-    outfile.write(reinterpret_cast<const char *>(&dim), sizeof(uint64_t));
+    /* 分块并行写入 thread_num 个文件 */
+    size_t total = table.size();
+    size_t chunk_size = (total + thread_num - 1) / thread_num;
+    std::vector<std::thread> threads;
 
-    /* write key-vec pair*/
-    for (const auto &pair : table) {
-        outfile.write(reinterpret_cast<const char *>(&pair.first), sizeof(uint64_t));
-        outfile.write(reinterpret_cast<const char *>(pair.second.data()), dim * sizeof(float));
+    for (unsigned int t = 0; t < thread_num; ++t) {
+        size_t start = t * chunk_size;
+        size_t end = std::min(start + chunk_size, total);
+        if (start >= end) break;
+        std::string file_name = data_root + "/" + std::to_string(file_num + 1 + t) + ".kvec";
+        threads.emplace_back([this, start, end, file_name]() {
+            std::ofstream outfile(file_name, std::ios::binary);
+            outfile.write(reinterpret_cast<const char *>(&dim), sizeof(uint64_t));
+            for (size_t j = start; j < end; ++j) {
+                const auto &pair = table[j];
+                outfile.write(reinterpret_cast<const char *>(&pair.first), sizeof(uint64_t));
+                outfile.write(reinterpret_cast<const char *>(pair.second.data()), dim * sizeof(float));
+            }
+            outfile.close();
+        });
     }
-
-    outfile.close();
+    for (auto &th : threads) th.join();
 }
 
 void KvecTable::loadFile(const std::string &data_root) {

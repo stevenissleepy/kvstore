@@ -34,4 +34,6 @@ private:
     std::unordered_set<uint64_t> keyTable;
 
     uint64_t dim = 0;
+
+    uint32_t thread_num = 16;
 };
